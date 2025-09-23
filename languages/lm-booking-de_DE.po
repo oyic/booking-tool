@@ -1,0 +1,255 @@
+# German translation for Lektorat Mac Booking Plugin
+# Copyright (C) 2024 Lektorat Mac
+# This file is distributed under the same license as the Lektorat Mac Booking plugin.
+msgid ""
+msgstr ""
+"Project-Id-Version: Lektorat Mac Booking 1.0.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2024-01-01 12:00+0000\n"
+"PO-Revision-Date: 2024-01-01 12:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: German\n"
+"Language: de_DE\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# Admin Settings
+msgid "Package Options"
+msgstr "Paket-Optionen"
+
+msgid "Extras"
+msgstr "Zusatzleistungen"
+
+msgid "Delivery"
+msgstr "Lieferung"
+
+msgid "Language"
+msgstr "Sprache"
+
+msgid "Emails"
+msgstr "E-Mails"
+
+msgid "Advanced"
+msgstr "Erweitert"
+
+msgid "Package Management"
+msgstr "Paket-Verwaltung"
+
+msgid "Manage your service packages with an easy-to-use interface."
+msgstr "Verwalten Sie Ihre Service-Pakete mit einer benutzerfreundlichen Oberfläche."
+
+msgid "Package Name"
+msgstr "Paket-Name"
+
+msgid "Optional description..."
+msgstr "Optionale Beschreibung..."
+
+msgid "Add Package"
+msgstr "Paket hinzufügen"
+
+msgid "Reset to Defaults"
+msgstr "Auf Standard zurücksetzen"
+
+msgid "Extra Services Management"
+msgstr "Zusatzleistungen-Verwaltung"
+
+msgid "Manage your additional services with an easy-to-use interface."
+msgstr "Verwalten Sie Ihre zusätzlichen Services mit einer benutzerfreundlichen Oberfläche."
+
+msgid "Extra Service Name"
+msgstr "Zusatzleistung-Name"
+
+msgid "Add Extra Service"
+msgstr "Zusatzleistung hinzufügen"
+
+msgid "Delivery Options Management"
+msgstr "Lieferoptionen-Verwaltung"
+
+msgid "Manage your delivery timeframes and pricing options."
+msgstr "Verwalten Sie Ihre Lieferzeiten und Preisoptionen."
+
+msgid "Delivery Option Name"
+msgstr "Lieferoption-Name"
+
+msgid "days"
+msgstr "Tage"
+
+msgid "Enabled"
+msgstr "Aktiviert"
+
+msgid "Add Delivery Option"
+msgstr "Lieferoption hinzufügen"
+
+msgid "Global Delivery Settings"
+msgstr "Globale Lieferungseinstellungen"
+
+msgid "24h Buffer"
+msgstr "24h Puffer"
+
+msgid "Add 24-hour buffer to delivery dates"
+msgstr "24-Stunden-Puffer zu Lieferterminen hinzufügen"
+
+msgid "Language Settings"
+msgstr "Spracheinstellungen"
+
+msgid "Configure the language and localization settings for your booking form."
+msgstr "Konfigurieren Sie die Sprach- und Lokalisierungseinstellungen für Ihr Buchungsformular."
+
+msgid "Application Language"
+msgstr "Anwendungssprache"
+
+msgid "English"
+msgstr "Englisch"
+
+msgid "German"
+msgstr "Deutsch"
+
+msgid "French"
+msgstr "Französisch"
+
+msgid "Spanish"
+msgstr "Spanisch"
+
+msgid "Italian"
+msgstr "Italienisch"
+
+msgid "Dutch"
+msgstr "Niederländisch"
+
+msgid "Portuguese"
+msgstr "Portugiesisch"
+
+msgid "Russian"
+msgstr "Russisch"
+
+msgid "Chinese"
+msgstr "Chinesisch"
+
+msgid "Japanese"
+msgstr "Japanisch"
+
+msgid "Korean"
+msgstr "Koreanisch"
+
+msgid "Select the primary language for the booking form interface."
+msgstr "Wählen Sie die Hauptsprache für die Buchungsformular-Oberfläche."
+
+msgid "Date Format"
+msgstr "Datumsformat"
+
+msgid "Choose the date format for displaying dates in the booking form."
+msgstr "Wählen Sie das Datumsformat für die Anzeige von Daten im Buchungsformular."
+
+msgid "Currency"
+msgstr "Währung"
+
+msgid "Select the currency for displaying prices in the booking form."
+msgstr "Wählen Sie die Währung für die Anzeige von Preisen im Buchungsformular."
+
+msgid "Timezone"
+msgstr "Zeitzone"
+
+msgid "Select the timezone for date and time calculations."
+msgstr "Wählen Sie die Zeitzone für Datums- und Zeitberechnungen."
+
+# Form Labels
+msgid "Dein Paket"
+msgstr "Dein Paket"
+
+msgid "Booking progress"
+msgstr "Buchungsfortschritt"
+
+# Service Options
+msgid "Premium Editing"
+msgstr "Premium-Paket"
+
+msgid "Mac Formatting"
+msgstr "Mac-Paket"
+
+msgid "All-In Service"
+msgstr "All-In-Paket"
+
+msgid "Professional editing and proofreading service"
+msgstr "Professionelle Bearbeitung und Korrekturlesen"
+
+msgid "Academic formatting according to guidelines"
+msgstr "Akademische Formatierung nach Richtlinien"
+
+msgid "Table of Contents Creation"
+msgstr "Erstellung eines Inhalts-, Abbildungs- & Tabellenverzeichnisses"
+
+msgid "Scientific Text Formatting"
+msgstr "Textformatierung nach wissenschaftlichen Richtlinien"
+
+msgid "Bibliography Review"
+msgstr "Überprüfung des Literaturverzeichnisses"
+
+msgid "Citation Check"
+msgstr "Überprüfung der Zitierweise (APA, Harvard & Co.)"
+
+msgid "Text Coherence Review"
+msgstr "Überprüfung des Textzusammenhangs & roter Faden"
+
+msgid "Presentation Review"
+msgstr "Überprüfung von Präsentationen & Abschlussverteidigungen"
+
+msgid "Plagiarism Check"
+msgstr "Plagiatsprüfung & KI-Erkennung"
+
+msgid "Gender-Inclusive Language"
+msgstr "Gendergerechte Sprache"
+
+msgid "Normal"
+msgstr "Normal"
+
+msgid "Fast delivery"
+msgstr "Schnelle Lieferung"
+
+msgid "Express delivery"
+msgstr "Express-Lieferung"
+
+msgid "surcharge"
+msgstr "Aufschlag"
+
+# Messages
+msgid "Settings saved successfully!"
+msgstr "Einstellungen erfolgreich gespeichert!"
+
+msgid "Are you sure you want to reset services to defaults?"
+msgstr "Sind Sie sicher, dass Sie die Services auf die Standardeinstellungen zurücksetzen möchten?"
+
+msgid "Are you sure you want to reset extras to defaults?"
+msgstr "Sind Sie sicher, dass Sie die Zusatzleistungen auf die Standardeinstellungen zurücksetzen möchten?"
+
+msgid "Are you sure you want to reset delivery options to defaults?"
+msgstr "Sind Sie sicher, dass Sie die Lieferoptionen auf die Standardeinstellungen zurücksetzen möchten?"
+
+msgid "Are you sure you want to delete"
+msgstr "Sind Sie sicher, dass Sie löschen möchten"
+
+msgid "this package"
+msgstr "dieses Paket"
+
+msgid "this extra service"
+msgstr "diese Zusatzleistung"
+
+msgid "this delivery option"
+msgstr "diese Lieferoption"
+
+msgid "This action cannot be undone."
+msgstr "Diese Aktion kann nicht rückgängig gemacht werden."
+
+msgid "Remove Package"
+msgstr "Paket entfernen"
+
+msgid "Remove Extra"
+msgstr "Zusatzleistung entfernen"
+
+msgid "Remove Delivery Option"
+msgstr "Lieferoption entfernen"
+
+msgid "Featured"
+msgstr "Empfohlen"
+

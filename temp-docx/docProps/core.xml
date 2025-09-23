@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties">
+  <dc:title xmlns:dc="http://purl.org/dc/elements/1.1/">Test Document</dc:title>
+  <dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">Test</dc:creator>
+  <cp:lastModifiedBy>Test</cp:lastModifiedBy>
+  <dcterms:created xmlns:dcterms="http://purl.org/dc/terms/" xsi:type="dcterms:W3CDTF" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">2024-01-01T00:00:00Z</dcterms:created>
+  <dcterms:modified xmlns:dcterms="http://purl.org/dc/terms/" xsi:type="dcterms:W3CDTF" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">2024-01-01T00:00:00Z</dcterms:modified>
+</cp:coreProperties>

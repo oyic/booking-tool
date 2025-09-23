@@ -1,0 +1,7 @@
+{
+    "php.executablePath": "/opt/homebrew/bin/php",
+    "php.validate.executablePath": "/opt/homebrew/bin/php",
+    "php.suggest.basic": false,
+    "php.validate.enable": true,
+    "php.validate.run": "onSave"
+}
