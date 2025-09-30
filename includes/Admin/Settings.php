@@ -62,6 +62,13 @@ class Settings
                         unset($sanitized[$key]);
                     }
                 }
+            } elseif ($active_tab === 'emails') {
+                // Clear old email data
+                foreach ($sanitized as $key => $value) {
+                    if (in_array($key, ['admin_email', 'customer_email_subject', 'admin_email_subject', 'booking_email_template', 'voucher_email_template'])) {
+                        unset($sanitized[$key]);
+                    }
+                }
             }
             
             foreach ($_POST['lm_booking_settings'] as $key => $val) {
@@ -87,8 +94,13 @@ class Settings
                 elseif ($active_tab === 'language' && in_array($key, ['language', 'date_format', 'currency'])) {
                     $sanitized[$key] = sanitize_text_field($val);
                 }
-                elseif ($active_tab === 'emails' && in_array($key, ['admin_email', 'customer_email_subject', 'admin_email_subject'])) {
-                    $sanitized[$key] = sanitize_text_field($val);
+                elseif ($active_tab === 'emails' && in_array($key, ['admin_email', 'customer_email_subject', 'admin_email_subject', 'booking_email_template', 'voucher_email_template'])) {
+                    // Handle email templates with wp_kses_post to allow HTML
+                    if (in_array($key, ['booking_email_template', 'voucher_email_template'])) {
+                        $sanitized[$key] = wp_kses_post($val);
+                    } else {
+                        $sanitized[$key] = sanitize_text_field($val);
+                    }
                 }
                 elseif ($active_tab === 'advanced' && in_array($key, ['debug_mode', 'strict_validation', 'auto_save'])) {
                     $sanitized[$key] = sanitize_text_field($val);
@@ -97,9 +109,14 @@ class Settings
             
             // Reconstruct arrays from individual fields for the active tab
             $sanitized = $this->reconstructArrays($sanitized, $active_tab);
+            
+            // Always reconstruct delivery options for display, regardless of active tab
+            $sanitized = $this->reconstructDeliveryOptions($sanitized);
         } else {
             // If no POST data, return existing settings
             $sanitized = $existing_settings;
+            // Always reconstruct delivery options for display
+            $sanitized = $this->reconstructDeliveryOptions($sanitized);
         }
         
         return $sanitized;
@@ -107,7 +124,6 @@ class Settings
     
     private function reconstructArrays(array $settings, string $active_tab): array
     {
-        
         // Reconstruct services array
         if ($active_tab === 'packages') {
             $services = [];
@@ -172,35 +188,47 @@ class Settings
             }
         }
         
-        // Reconstruct delivery options array
+        // Reconstruct delivery options array (only when saving delivery tab)
         if ($active_tab === 'delivery') {
-            $deliveryOptions = [];
-            
-            foreach ($settings as $key => $value) {
-                if (strpos($key, 'delivery_label_') === 0) {
-                    $deliveryKey = str_replace('delivery_label_', '', $key);
-                    $label = $value;
-                    $price = $settings['delivery_price_' . $deliveryKey] ?? 0;
-                    $days = $settings['delivery_days_' . $deliveryKey] ?? 3;
-                    
-                    if (!empty($label)) {
-                        $description = $settings['delivery_description_' . $deliveryKey] ?? '';
-                        $bufferHours = $settings['delivery_buffer_' . $deliveryKey] ?? 24;
-                        $deliveryOptions[$deliveryKey] = [
-                            'label' => $label,
-                            'days' => intval($days),
-                            'surcharge' => floatval($price),
-                            'description' => $description,
-                            'buffer_hours' => intval($bufferHours),
-                            'enabled' => true
-                        ];
-                    }
+            $settings = $this->reconstructDeliveryOptions($settings);
+        }
+        
+        return $settings;
+    }
+    
+    /**
+     * Reconstruct delivery options array from individual fields
+     */
+    private function reconstructDeliveryOptions(array $settings): array
+    {
+        $deliveryOptions = [];
+        
+        foreach ($settings as $key => $value) {
+            if (strpos($key, 'delivery_label_') === 0) {
+                $deliveryKey = str_replace('delivery_label_', '', $key);
+                $label = $value;
+                $days = $settings['delivery_days_' . $deliveryKey] ?? 3;
+                
+                // Handle both 'delivery_surcharge_' and 'delivery_price_' field names
+                $surcharge = $settings['delivery_surcharge_' . $deliveryKey] ?? $settings['delivery_price_' . $deliveryKey] ?? 0;
+                
+                $bufferHours = $settings['delivery_buffer_hours_' . $deliveryKey] ?? 24;
+                $enabled = isset($settings['delivery_enabled_' . $deliveryKey]) && $settings['delivery_enabled_' . $deliveryKey] === '1';
+                
+                if (!empty($label)) {
+                    $deliveryOptions[] = [
+                        'label' => $label,
+                        'days' => intval($days),
+                        'surcharge' => floatval($surcharge),
+                        'buffer_hours' => intval($bufferHours),
+                        'enabled' => $enabled
+                    ];
                 }
             }
-            
-            if (!empty($deliveryOptions)) {
-                $settings['delivery_options'] = $deliveryOptions;
-            }
+        }
+        
+        if (!empty($deliveryOptions)) {
+            $settings['delivery_options'] = $deliveryOptions;
         }
         
         return $settings;

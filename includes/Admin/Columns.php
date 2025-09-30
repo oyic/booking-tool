@@ -18,6 +18,8 @@ class Columns
         $newColumns['cb'] = $columns['cb'];
         $newColumns['title'] = $columns['title'];
         $newColumns['customer'] = __('Customer', 'lm-booking');
+        $newColumns['service'] = __('Service', 'lm-booking');
+        $newColumns['extras'] = __('Extras', 'lm-booking');
         $newColumns['total'] = __('Total', 'lm-booking');
         $newColumns['date'] = $columns['date'];
 
@@ -38,10 +40,64 @@ class Columns
                 }
                 break;
 
+            case 'service':
+                $service = get_post_meta($postId, '_lm_booking_service', true);
+                if ($service) {
+                    echo esc_html($service);
+                }
+                break;
+
+            case 'extras':
+                $extras = get_post_meta($postId, '_lm_booking_extras', true);
+                $service = get_post_meta($postId, '_lm_booking_service', true);
+                if ($extras) {
+                    $extrasArray = json_decode($extras, true);
+                    if (is_array($extrasArray) && !empty($extrasArray)) {
+                        $extrasList = implode('; ', array_map(function($extra) use ($service) {
+                            // Get settings to determine package index
+                            $settings = get_option('lm_booking_settings', []);
+                            $services = $settings['services'] ?? [];
+                            $selectedPackageIndex = null;
+                            
+                            foreach ($services as $index => $s) {
+                                if ($s['label'] === $service) {
+                                    $selectedPackageIndex = $index;
+                                    break;
+                                }
+                            }
+                            
+                            // Check if this extra is actually inclusive for the selected package
+                            $includedPackages = $extra['included_packages'] ?? [];
+                            
+                            // Convert included_packages to integers to ensure proper comparison
+                            $includedPackages = array_map('intval', $includedPackages);
+                            $isInclusive = in_array($selectedPackageIndex, $includedPackages);
+                            
+                            // Debug logging
+                            error_log('Columns Debug - Extra: ' . $extra['label'] . ', Service: ' . $service . ', PackageIndex: ' . $selectedPackageIndex . ', IncludedPackages: ' . print_r($includedPackages, true) . ', IsInclusive: ' . ($isInclusive ? 'YES' : 'NO'));
+                            
+                            if ($isInclusive) {
+                                return '<span style="background-color: #fff3cd; color: #856404; padding: 2px 6px; border-radius: 4px; font-size: 11px;">' . esc_html($extra['label']) . ' (inkl.)</span>';
+                            } else {
+                                $price = $extra['price'] == floor($extra['price']) ? 
+                                    $extra['price'] : 
+                                    number_format($extra['price'], 2, ',', '');
+                                return esc_html($extra['label']) . ' (+€' . $price . ')';
+                            }
+                        }, $extrasArray));
+                        echo $extrasList;
+                    } else {
+                        echo '-';
+                    }
+                } else {
+                    echo '-';
+                }
+                break;
+
             case 'total':
                 $total = get_post_meta($postId, '_lm_booking_total', true);
                 if ($total) {
-                    echo '€' . esc_html(number_format($total, 2));
+                    echo esc_html(number_format($total, 2)) . '€';
                 }
                 break;
         }

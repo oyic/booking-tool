@@ -42,6 +42,16 @@ class Assets
         $extras = $settings['extras'] ?? [];
         $deliveryOptions = $settings['delivery_options'] ?? [];
         
+        // If delivery options are not properly loaded, try to reconstruct them
+        if (empty($deliveryOptions)) {
+            $deliveryOptions = $this->reconstructDeliveryOptions($settings);
+        }
+        
+        // Ensure delivery options is always an array
+        if (!is_array($deliveryOptions)) {
+            $deliveryOptions = [];
+        }
+        
         wp_localize_script('lm-booking-form', 'lmBookingAjax', [
             'ajaxurl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('lm_booking_nonce'),
@@ -107,5 +117,39 @@ class Assets
                 'help' => __('Hilfe', 'lm-booking'),
             ],
         ]);
+    }
+    
+    /**
+     * Reconstruct delivery options array from individual fields
+     */
+    private function reconstructDeliveryOptions(array $settings): array
+    {
+        $deliveryOptions = [];
+        
+        foreach ($settings as $key => $value) {
+            if (strpos($key, 'delivery_label_') === 0) {
+                $deliveryKey = str_replace('delivery_label_', '', $key);
+                $label = $value;
+                $days = $settings['delivery_days_' . $deliveryKey] ?? 3;
+                
+                // Handle both 'delivery_surcharge_' and 'delivery_price_' field names
+                $surcharge = $settings['delivery_surcharge_' . $deliveryKey] ?? $settings['delivery_price_' . $deliveryKey] ?? 0;
+                
+                $bufferHours = $settings['delivery_buffer_hours_' . $deliveryKey] ?? 24;
+                $enabled = isset($settings['delivery_enabled_' . $deliveryKey]) && $settings['delivery_enabled_' . $deliveryKey] === '1';
+                
+                if (!empty($label)) {
+                    $deliveryOptions[] = [
+                        'label' => $label,
+                        'days' => intval($days),
+                        'surcharge' => floatval($surcharge),
+                        'buffer_hours' => intval($bufferHours),
+                        'enabled' => $enabled
+                    ];
+                }
+            }
+        }
+        
+        return $deliveryOptions;
     }
 }

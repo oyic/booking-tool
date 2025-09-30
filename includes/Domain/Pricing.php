@@ -8,7 +8,8 @@ class Pricing
         float $servicePrice,
         array $extras = [],
         ?int $words = null,
-        ?string $delivery = 'standard'
+        ?string $delivery = 'standard',
+        ?int $selectedPackageIndex = null
     ): array {
         // If words is less than 250, treat as 1 page
         if (($words ?? 0) < 250) {
@@ -18,12 +19,13 @@ class Pricing
         }
         $base = $normPages * $servicePrice;
         // Exclude package inclusive extras from total calculation
-        $extrasTotal = array_sum(array_map(function($extra) {
-            // Check if extra is included in the selected package
-            $isPackageInclusive = ($extra['package_inclusive'] ?? false);
-            $includedInSelectedPackage = in_array($selectedPackageIndex, $extra['included_packages'] ?? []);
-            $shouldExclude = $isPackageInclusive || $includedInSelectedPackage;
-            return $shouldExclude ? 0 : $extra['price'];
+        $extrasTotal = array_sum(array_map(function($extra) use ($selectedPackageIndex) {
+            // Check if this extra is inclusive for the selected package
+            $includedPackages = $extra['included_packages'] ?? [];
+            $isInclusive = in_array($selectedPackageIndex, $includedPackages);
+            
+            // Only include non-inclusive extras in the total
+            return $isInclusive ? 0 : ($extra['price'] ?? 0);
         }, $extras));
         $subtotal = $base + $extrasTotal;
         

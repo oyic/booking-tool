@@ -131,8 +131,17 @@ class Ajax
         $servicePrice = !empty($selectedService) ? reset($selectedService)['price'] : 0;
         
 
+        // Get selected package index for pricing calculation
+        $selectedPackageIndex = null;
+        foreach ($services as $index => $s) {
+            if ($s['label'] === $service) {
+                $selectedPackageIndex = $index;
+                break;
+            }
+        }
+        
         // Server-side calculation (authoritative)
-        $pricing = \LM\Booking\Domain\Pricing::calculate($servicePrice, $extras, $words, $delivery);
+        $pricing = \LM\Booking\Domain\Pricing::calculate($servicePrice, $extras, $words, $delivery, $selectedPackageIndex);
         $serverTotal = $pricing['total'];
         $clientTotal = floatval($_POST['total'] ?? 0);
 
@@ -453,8 +462,11 @@ class Ajax
             $emailSent = $this->email->sendEmailConfirmation($email, $confirmationToken, $voucherData);
 
             if (is_wp_error($emailSent)) {
+                error_log('Email confirmation failed: ' . $emailSent->get_error_message());
+                error_log('Email: ' . $email . ', Token: ' . $confirmationToken);
                 wp_send_json_error([
-                    'message' => __('Bestätigungs-E-Mail konnte nicht gesendet werden. Bitte kontaktieren Sie den Support.', 'lm-booking')
+                    'message' => __('Bestätigungs-E-Mail konnte nicht gesendet werden. Bitte kontaktieren Sie den Support.', 'lm-booking'),
+                    'debug' => WP_DEBUG ? $emailSent->get_error_message() : ''
                 ], 500);
             }
 
@@ -464,7 +476,8 @@ class Ajax
                 'confirmation_sent' => true
             ]);
             
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
+            error_log('Voucher signup error: ' . $e->getMessage());
             wp_send_json_error([
                 'message' => __('Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut.', 'lm-booking')
             ], 500);
@@ -735,7 +748,8 @@ class Ajax
                 'expiry' => $voucher['expiry']
             ]);
             
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
+            error_log('Email confirmation error: ' . $e->getMessage());
             wp_send_json_error([
                 'message' => __('Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut.', 'lm-booking')
             ], 500);

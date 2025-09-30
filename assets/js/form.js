@@ -1,5 +1,15 @@
-jQuery(document).ready(function($) {
+// Ensure jQuery is loaded before initializing
+if (typeof jQuery === 'undefined') {
+    console.error('jQuery is not loaded. Booking wizard cannot initialize.');
+} else {
+    jQuery(document).ready(function($) {
     'use strict';
+
+    // Check if required elements exist
+    if ($('#lm-booking-form').length === 0) {
+        console.error('Booking form element not found. Wizard cannot initialize.');
+        return;
+    }
 
     class BookingWizard {
         constructor() {
@@ -42,6 +52,12 @@ jQuery(document).ready(function($) {
             this.$summaryConsent = $('#lm-summary-consent');
             this.$summaryVoucher = $('#lm-summary-voucher');
 
+            // Validate required elements exist
+            if (this.$form.length === 0 || this.$cta.length === 0) {
+                console.error('Required form elements missing. Wizard cannot initialize properly.');
+                return;
+            }
+
             this.init();
         }
 
@@ -78,39 +94,51 @@ jQuery(document).ready(function($) {
         }
 
         bindEvents() {
+            // Create mobile details button
+            this.createMobileDetailsButton();
+            $(window).on('resize', () => this.createMobileDetailsButton());
 
             // Word count slider and input interactions
-            $('#lm-words-slider').on('input change', (e) => {
-                const value = parseInt($(e.target).val());
-                // Ensure minimum value of 250
-                const finalValue = Math.max(250, value);
-                $('#lm-words').val(finalValue);
-                this.state.words = finalValue;
-                this.updateState();
-            });
+            const $wordsSlider = $('#lm-words-slider');
+            const $wordsInput = $('#lm-words');
+            
+            if ($wordsSlider.length && $wordsInput.length) {
+                $wordsSlider.on('input change', (e) => {
+                    const value = parseInt($(e.target).val());
+                    // Ensure minimum value of 250
+                    const finalValue = Math.max(250, value);
+                    $wordsInput.val(finalValue);
+                    this.state.words = finalValue;
+                    this.updateState();
+                });
+            }
 
-            $('#lm-words').on('input', (e) => {
-                const value = parseInt($(e.target).val()) || 0;
-                this.state.words = value;
-                this.updateState();
-            });
+            if ($wordsInput.length) {
+                $wordsInput.on('input', (e) => {
+                    const value = parseInt($(e.target).val()) || 0;
+                    this.state.words = value;
+                    this.updateState();
+                });
 
-            // Validate on blur - allow free input but validate when user leaves field
-            $('#lm-words').on('blur', (e) => {
-                const value = parseInt($(e.target).val()) || 0;
-                let finalValue = value;
-                
-                // Apply minimum validation only on blur
-                if (value < 250) {
-                    finalValue = 250;
-                    $(e.target).val(finalValue);
-                }
-                
-                // Update slider to match final value
-                $('#lm-words-slider').val(finalValue);
-                this.state.words = finalValue;
-                this.updateState();
-            });
+                // Validate on blur - allow free input but validate when user leaves field
+                $wordsInput.on('blur', (e) => {
+                    const value = parseInt($(e.target).val()) || 0;
+                    let finalValue = value;
+                    
+                    // Apply minimum validation only on blur
+                    if (value < 250) {
+                        finalValue = 250;
+                        $(e.target).val(finalValue);
+                    }
+                    
+                    // Update slider to match final value
+                    if ($wordsSlider.length) {
+                        $wordsSlider.val(finalValue);
+                    }
+                    this.state.words = finalValue;
+                    this.updateState();
+                });
+            }
 
             // Step 1: Package selection
             $('.lm-package-card').on('click', (e) => {
@@ -161,17 +189,23 @@ jQuery(document).ready(function($) {
             });
 
             // Step 3: Customer form
-            $('#lm-name, #lm-email, #lm-country, #lm-program, #lm-note').on('input change', (e) => {
-                const field = e.target.id.replace('lm-', '');
-                this.state.customer[field] = e.target.value;
-                this.updateState();
-            });
+            const $customerFields = $('#lm-name, #lm-email, #lm-country, #lm-program, #lm-note');
+            if ($customerFields.length) {
+                $customerFields.on('input change', (e) => {
+                    const field = e.target.id.replace('lm-', '');
+                    this.state.customer[field] = e.target.value;
+                    this.updateState();
+                });
+            }
 
             // Consent checkbox
-            $('#lm-consent-checkbox').on('change', (e) => {
-                this.state.consent = e.target.checked;
-                this.updateState();
-            });
+            const $consentCheckbox = $('#lm-consent-checkbox');
+            if ($consentCheckbox.length) {
+                $consentCheckbox.on('change', (e) => {
+                    this.state.consent = e.target.checked;
+                    this.updateState();
+                });
+            }
 
             // CTA button - Handle step navigation
             this.$cta.on('click', (e) => {
@@ -249,32 +283,27 @@ jQuery(document).ready(function($) {
                 return false;
             });
 
-            // Info buttons
-            $(document).on('click', '.lm-extras-info', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                this.toggleInfoPopup($(e.currentTarget));
-            });
-
-            // Close popup when clicking outside
-            $(document).on('click', (e) => {
-                if (!$(e.target).closest('.lm-extras-info, .lm-info-popup').length) {
-                    this.hideAllInfoPopups();
-                }
-            });
 
             // Voucher functionality
-            $('#lm-apply-voucher').on('click', (e) => {
-                e.preventDefault();
-                this.applyVoucher();
-            });
-
-            $('#lm-voucher-code').on('keypress', (e) => {
-                if (e.which === 13) { // Enter key
+            const $applyVoucherBtn = $('#lm-apply-voucher');
+            const $voucherCodeInput = $('#lm-voucher-code');
+            
+            if ($applyVoucherBtn.length) {
+                $applyVoucherBtn.on('click', (e) => {
                     e.preventDefault();
                     this.applyVoucher();
-                }
-            });
+                });
+            }
+
+            if ($voucherCodeInput.length) {
+                $voucherCodeInput.on('keypress', (e) => {
+                    if (e.which === 13) { // Enter key
+                        e.preventDefault();
+                        this.applyVoucher();
+                    }
+                });
+            }
+
         }
 
         calculateNormPages(words) {
@@ -315,22 +344,30 @@ jQuery(document).ready(function($) {
         }
 
         updatePackageInclusiveExtras(packageIndex) {
-            // Clear current package-inclusive extras
-            this.state.extras = this.state.extras.filter(extra => !extra.included_packages || !extra.included_packages.includes(packageIndex));
+            // Clear current package-inclusive extras (only remove those that are actually included in this package)
+            this.state.extras = this.state.extras.filter(extra => {
+                const includedPackages = extra.included_packages || [];
+                return !includedPackages.includes(packageIndex);
+            });
             
-            // Auto-select extras that are included in this package
+            // Process all extras checkboxes
             $('.lm-extras-checkbox').each((index, checkbox) => {
                 const $checkbox = $(checkbox);
                 const extra = JSON.parse($checkbox.val());
                 const includedPackages = extra.included_packages || [];
                 
                 if (includedPackages.includes(packageIndex)) {
+                    // This extra should be included in this package
                     $checkbox.prop('checked', true).addClass('package-inclusive');
                     if (!this.state.extras.find(e => e.label === extra.label)) {
                         this.state.extras.push(extra);
                     }
                 } else {
+                    // This extra should NOT be included in this package
                     $checkbox.removeClass('package-inclusive');
+                    $checkbox.prop('checked', false);
+                    // Remove from state if it was previously selected for another package
+                    this.state.extras = this.state.extras.filter(e => e.label !== extra.label);
                 }
             });
         }
@@ -350,23 +387,38 @@ jQuery(document).ready(function($) {
             }, 0);
             const subtotal = base + extrasTotal;
             
-            // Get delivery surcharge from settings (same as backend)
+            // Get delivery surcharge from actual settings (same as backend)
             let multiplier = 1.00;
             let surcharge = 0;
             
             // Parse delivery days from format like "2d", "1d", "3d"
             const deliveryDays = parseInt(this.state.delivery.replace('d', ''));
             
-            // Apply surcharge based on delivery days (matching backend logic)
-            if (deliveryDays === 2) {
-                surcharge = 15; // 15% surcharge for 2-day delivery
-                multiplier = 1.15;
-            } else if (deliveryDays === 1) {
-                surcharge = 50; // 50% surcharge for 1-day delivery
-                multiplier = 1.50;
+            // Find matching delivery option from settings
+            if (typeof lmBookingAjax !== 'undefined' && lmBookingAjax.delivery && lmBookingAjax.delivery.options && Array.isArray(lmBookingAjax.delivery.options)) {
+                const deliveryOption = lmBookingAjax.delivery.options.find(option => option.days === deliveryDays);
+                if (deliveryOption) {
+                    surcharge = deliveryOption.surcharge || 0;
+                    multiplier = 1 + (surcharge / 100);
+                }
             } else {
-                surcharge = 0; // No surcharge for 3-day delivery
-                multiplier = 1.00;
+                // Debug: Log what we received for delivery options
+                if (typeof lmBookingAjax !== 'undefined' && lmBookingAjax.delivery) {
+                    console.log('Delivery options debug:', {
+                        delivery: lmBookingAjax.delivery,
+                        options: lmBookingAjax.delivery.options,
+                        isArray: Array.isArray(lmBookingAjax.delivery.options),
+                        type: typeof lmBookingAjax.delivery.options
+                    });
+                }
+                // Fallback to hardcoded values if lmBookingAjax is not available
+                if (deliveryDays === 1) {
+                    surcharge = 50;
+                    multiplier = 1.50;
+                } else if (deliveryDays === 2) {
+                    surcharge = 15;
+                    multiplier = 1.15;
+                }
             }
             
             let total = Math.round(subtotal * multiplier * 100) / 100;
@@ -400,7 +452,7 @@ jQuery(document).ready(function($) {
                 discountAmount: this.state.totals.discountAmount
             };
             
-            this.state.deliveryDate = this.calculateDeliveryDate(this.state.delivery, lmBookingAjax.delivery.buffer24h);
+            this.state.deliveryDate = this.calculateDeliveryDate(this.state.delivery, (lmBookingAjax && lmBookingAjax.delivery && lmBookingAjax.delivery.buffer24h) || true);
             
             this.updateSummary();
             this.updateHiddenFields();
@@ -415,46 +467,97 @@ jQuery(document).ready(function($) {
 
 
             // Update total display - show both original and discounted prices if voucher is applied
-            if (this.state.voucher.applied && this.state.voucher.discount > 0 && this.state.totals.originalTotal) {
-                const originalPrice = this.formatCurrency(this.state.totals.originalTotal);
-                const discountedPrice = this.formatCurrency(this.state.totals.total);
-                const discountAmount = this.formatCurrency(this.state.totals.discountAmount || 0);
-                
-                
-                $('#lm-total-display').html(`
-                    <span class="lm-original-price">${originalPrice}€</span>
-                    <span class="lm-discounted-price">${discountedPrice}€</span>
-                    <span class="lm-discount-info">(-${discountAmount}€)</span>
-                `);
-            } else {
-                $('#lm-total-display').text(`${this.formatCurrency(this.state.totals.total)}€`);
+            const $totalDisplay = $('#lm-total-display');
+            const $deliveryDateDisplay = $('#lm-delivery-date-display');
+            
+            if ($totalDisplay.length) {
+                if (this.state.voucher.applied && this.state.voucher.discount > 0 && this.state.totals.originalTotal) {
+                    const originalPrice = this.formatCurrency(this.state.totals.originalTotal);
+                    const discountedPrice = this.formatCurrency(this.state.totals.total);
+                    const discountAmount = this.formatCurrency(this.state.totals.discountAmount || 0);
+                    
+                    $totalDisplay.html(`
+                        <span class="lm-original-price">${originalPrice}€</span>
+                        <span class="lm-discounted-price">${discountedPrice}€</span>
+                        <span class="lm-discount-info">(-${discountAmount}€)</span>
+                    `);
+                } else {
+                    $totalDisplay.text(`${this.formatCurrency(this.state.totals.total)}€`);
+                }
             }
-            $('#lm-delivery-date-display').text(this.state.deliveryDate);
+            
+            if ($deliveryDateDisplay.length) {
+                $deliveryDateDisplay.text(this.state.deliveryDate);
+            }
             
             // Update summary details
-            $('#lm-summary-service').text(this.state.service || '-');
-            $('#lm-summary-words').text(this.state.words || '-');
+            const $summaryPackage = $('#lm-summary-package');
+            const $summaryWords = $('#lm-summary-words');
+            const $summaryPages = $('#lm-summary-pages');
+            const $summaryDelivery = $('#lm-summary-delivery');
+            
+            if ($summaryPackage.length) $summaryPackage.text(this.state.service || '-');
+            if ($summaryWords.length) $summaryWords.text(this.state.words || '-');
+            if ($summaryPages.length) $summaryPages.text(this.state.normPages || '-');
             
             // Update delivery summary
             let deliveryText = '-';
             if (this.state.delivery === '1d') deliveryText = '1 Tag';
             else if (this.state.delivery === '2d') deliveryText = '2 Tage';
             else if (this.state.delivery === '3d') deliveryText = '3 Tage';
-            $('#lm-summary-delivery').text(deliveryText);
+            if ($summaryDelivery.length) $summaryDelivery.text(deliveryText);
             
             // Update extras summary
             if (this.state.extras.length > 0) {
-                const extrasList = this.state.extras.map(extra => `<li>${extra.label}</li>`).join('');
-                $('#lm-summary-extras').html(`<ul>${extrasList}</ul>`);
+                const extrasList = this.state.extras.map(extra => {
+                    const includedPackages = extra.included_packages || [];
+                    const isInclusive = includedPackages.includes(this.state.selectedPackageIndex);
+                    
+                    if (isInclusive) {
+                        // Inclusive extra - show with different color, no price
+                        return `<li style="color: #6c757d; font-style: italic; font-size: 12px;">${extra.label} (inklusive)</li>`;
+                    } else {
+                        // Selected extra - show with price
+                        const price = extra.price === Math.floor(extra.price) ? 
+                            extra.price.toString().replace('.', ',') : 
+                            extra.price.toFixed(2).replace('.', ',');
+                        return `<li style="font-size: 12px;">${extra.label} +${price}€</li>`;
+                    }
+                }).join('');
+                const $summaryExtras = $('#lm-summary-extras');
+                if ($summaryExtras.length) {
+                    $summaryExtras.html(`<ul>${extrasList}</ul>`);
+                }
             } else {
-                $('#lm-summary-extras').text(lmBookingAjax.i18n.labels.noExtras);
+                const $summaryExtras = $('#lm-summary-extras');
+                if ($summaryExtras.length) {
+                    $summaryExtras.text((lmBookingAjax && lmBookingAjax.i18n && lmBookingAjax.i18n.labels && lmBookingAjax.i18n.labels.noExtras) || 'keine ausgewählt');
+                }
+            }
+            
+            // Update voucher summary
+            const $voucherDiscount = $('#lm-voucher-discount');
+            const $voucherCodeDisplay = $('#lm-voucher-code-display');
+            
+            if (this.state.voucher.applied && this.state.voucher.discount > 0) {
+                const discountAmount = this.formatCurrency(this.state.totals.discountAmount || 0);
+                if ($voucherDiscount.length) $voucherDiscount.text(`-${discountAmount}€`);
+                if ($voucherCodeDisplay.length) $voucherCodeDisplay.text(this.state.voucher.code);
+                if (this.$summaryVoucher.length) this.$summaryVoucher.show();
+            } else {
+                if (this.$summaryVoucher.length) this.$summaryVoucher.hide();
             }
         }
 
         updateHiddenFields() {
-            $('#lm-total').val(this.state.totals.total);
-            $('#lm-norm-pages').val(this.state.normPages);
-            $('#lm-delivery-date').val(this.state.deliveryDate);
+            const $total = $('#lm-total');
+            const $normPages = $('#lm-norm-pages');
+            const $deliveryDate = $('#lm-delivery-date');
+            const $breakdown = $('#lm-breakdown');
+            
+            if ($total.length) $total.val(this.state.totals.total);
+            if ($normPages.length) $normPages.val(this.state.normPages);
+            if ($deliveryDate.length) $deliveryDate.val(this.state.deliveryDate);
             
             const breakdown = JSON.stringify({
                 normPages: this.state.normPages,
@@ -467,10 +570,12 @@ jQuery(document).ready(function($) {
                 delivery: this.state.delivery,
                 multiplier: this.state.delivery === '2d' ? 1.15 : (this.state.delivery === '1d' ? 1.50 : 1.00)
             });
-            $('#lm-breakdown').val(breakdown);
+            if ($breakdown.length) $breakdown.val(breakdown);
         }
 
         updateStepper() {
+            if (this.$stepperItems.length === 0) return;
+            
             this.$stepperItems.removeClass('lm-stepper-active lm-stepper-completed');
             
             // Handle success step - mark all steps as completed
@@ -492,11 +597,73 @@ jQuery(document).ready(function($) {
             });
         }
 
+        createMobileDetailsButton() {
+            const $summary = $('.lm-wizard-summary');
+            const $existingButton = $('#lm-mobile-details-btn');
+            
+            // Remove existing button if it exists
+            if ($existingButton.length) {
+                $existingButton.remove();
+            }
+            
+            // Only create button on mobile
+            if (window.innerWidth <= 768 && $summary.length) {
+                const $button = $(`
+                    <button type="button" id="lm-mobile-details-btn" class="lm-mobile-details-btn">
+                        <span class="lm-details-text">Einzelheiten</span>
+                        <span class="lm-details-icon">▼</span>
+                    </button>
+                `);
+                
+                // Insert button inside the summary, at the very beginning
+                $summary.prepend($button);
+                
+                // Force positioning to ensure it stays in place
+                $button.css({
+                    'position': 'static',
+                    'top': 'auto',
+                    'left': 'auto',
+                    'right': 'auto',
+                    'bottom': 'auto',
+                    'transform': 'none',
+                    'float': 'none',
+                    'clear': 'both',
+                    'display': 'flex',
+                    'visibility': 'visible',
+                    'z-index': 'auto'
+                });
+                
+                // Add click handler
+                $button.on('click', (e) => {
+                    e.preventDefault();
+                    const $collapsible = $('#lm-summary-collapsible');
+                    const $detailsText = $button.find('.lm-details-text');
+                    
+                    if ($collapsible.length) {
+                        // Check if content is currently visible (expanded) or hidden (collapsed)
+                        const isExpanded = $collapsible.hasClass('expanded');
+                        
+                        if (!isExpanded) {
+                            // Currently collapsed - expand it
+                            $detailsText.text('Weniger anzeigen');
+                            $button.addClass('expanded');
+                            $collapsible.removeClass('collapsed').addClass('expanded');
+                        } else {
+                            // Currently expanded - collapse it
+                            $detailsText.text('Einzelheiten');
+                            $button.removeClass('expanded');
+                            $collapsible.removeClass('expanded').addClass('collapsed');
+                        }
+                    }
+                });
+            }
+        }
+
         validateStep(step) {
             switch (step) {
                 case 1:
                     if (!this.state.service) {
-                        this.showError(lmBookingAjax.i18n.validation.required);
+                        this.showError((lmBookingAjax && lmBookingAjax.i18n && lmBookingAjax.i18n.validation && lmBookingAjax.i18n.validation.required) || 'Dieses Feld ist erforderlich');
                         return false;
                     }
                     if (this.state.words < 250) {
@@ -514,23 +681,23 @@ jQuery(document).ready(function($) {
                     
                 case 3:
                     if (!this.state.customer.name.trim()) {
-                        this.showError(lmBookingAjax.i18n.validation.required);
+                        this.showError((lmBookingAjax && lmBookingAjax.i18n && lmBookingAjax.i18n.validation && lmBookingAjax.i18n.validation.required) || 'Dieses Feld ist erforderlich');
                         return false;
                     }
                     if (!this.state.customer.email.trim() || !this.isValidEmail(this.state.customer.email)) {
-                        this.showError(lmBookingAjax.i18n.validation.invalidEmail);
+                        this.showError((lmBookingAjax && lmBookingAjax.i18n && lmBookingAjax.i18n.validation && lmBookingAjax.i18n.validation.invalidEmail) || 'Bitte geben Sie eine gültige E-Mail-Adresse ein');
                         return false;
                     }
                     if (!this.state.customer.country) {
-                        this.showError(lmBookingAjax.i18n.validation.required);
+                        this.showError((lmBookingAjax && lmBookingAjax.i18n && lmBookingAjax.i18n.validation && lmBookingAjax.i18n.validation.required) || 'Dieses Feld ist erforderlich');
                         return false;
                     }
                     if (!this.state.customer.program) {
-                        this.showError(lmBookingAjax.i18n.validation.required);
+                        this.showError((lmBookingAjax && lmBookingAjax.i18n && lmBookingAjax.i18n.validation && lmBookingAjax.i18n.validation.required) || 'Dieses Feld ist erforderlich');
                         return false;
                     }
                     if (!this.state.consent) {
-                        this.showError(lmBookingAjax.i18n.validation.consentRequired);
+                        this.showError((lmBookingAjax && lmBookingAjax.i18n && lmBookingAjax.i18n.validation && lmBookingAjax.i18n.validation.consentRequired) || 'Sie müssen den AGB und der Datenschutzerklärung zustimmen');
                         return false;
                     }
                     return true;
@@ -569,49 +736,61 @@ jQuery(document).ready(function($) {
         }
 
         showStep(step) {
+            if (this.$steps.length === 0) return;
+            
             this.$steps.hide();
             
             // Handle success step
             if (step === 'success') {
-                $('#lm-step-success').show();
+                const $successStep = $('#lm-step-success');
+                if ($successStep.length) {
+                    $successStep.show();
+                }
                 return;
             }
             
             // Handle regular steps
-            $(`#lm-step-${step}`).show();
-            
-            // Focus first input in the step
-            const $firstInput = $(`#lm-step-${step} input, #lm-step-${step} select, #lm-step-${step} textarea`).first();
-            if ($firstInput.length) {
-                $firstInput.focus();
+            const $targetStep = $(`#lm-step-${step}`);
+            if ($targetStep.length) {
+                $targetStep.show();
+                
+                // Focus first input in the step
+                const $firstInput = $targetStep.find('input, select, textarea').first();
+                if ($firstInput.length) {
+                    $firstInput.focus();
+                }
             }
         }
 
         updateCTA() {
             const ctaTexts = {
-                1: lmBookingAjax.i18n.buttons.toExtras,
-                2: lmBookingAjax.i18n.buttons.lastStep,
-                3: lmBookingAjax.i18n.buttons.getOffer
+                1: (lmBookingAjax && lmBookingAjax.i18n && lmBookingAjax.i18n.buttons && lmBookingAjax.i18n.buttons.toExtras) || 'Zu den Extras',
+                2: (lmBookingAjax && lmBookingAjax.i18n && lmBookingAjax.i18n.buttons && lmBookingAjax.i18n.buttons.lastStep) || 'Letzter Schritt',
+                3: (lmBookingAjax && lmBookingAjax.i18n && lmBookingAjax.i18n.buttons && lmBookingAjax.i18n.buttons.getOffer) || 'Angebot erhalten'
             };
             
-            this.$cta.text(ctaTexts[this.currentStep] || lmBookingAjax.i18n.buttons.next);
+            this.$cta.text(ctaTexts[this.currentStep] || (lmBookingAjax && lmBookingAjax.i18n && lmBookingAjax.i18n.buttons && lmBookingAjax.i18n.buttons.next) || 'Weiter');
             
             // Show voucher and consent sections on step 3
             if (this.currentStep === 3) {
-                this.$summaryVoucher.show();
-                this.$summaryConsent.show();
+                if (this.$summaryVoucher.length) this.$summaryVoucher.show();
+                if (this.$summaryConsent.length) this.$summaryConsent.show();
+                $('#lm-voucher-section').show();
             } else {
-                this.$summaryVoucher.hide();
-                this.$summaryConsent.hide();
+                if (this.$summaryVoucher.length) this.$summaryVoucher.hide();
+                if (this.$summaryConsent.length) this.$summaryConsent.hide();
+                $('#lm-voucher-section').hide();
             }
         }
 
         submitForm() {
-            this.$cta.prop('disabled', true).text('Wird gesendet...');
+            if (this.$cta.length) {
+                this.$cta.prop('disabled', true).text('Wird gesendet...');
+            }
 
             const formData = new FormData();
             formData.append('action', 'lm_booking_submit');
-            formData.append('nonce', lmBookingAjax.nonce);
+            formData.append('nonce', (lmBookingAjax && lmBookingAjax.nonce) || '');
             formData.append('service', this.state.service);
             formData.append('words', this.state.words);
             formData.append('delivery', this.state.delivery);
@@ -637,7 +816,7 @@ jQuery(document).ready(function($) {
             }
 
             $.ajax({
-                url: lmBookingAjax.ajaxurl,
+                url: (lmBookingAjax && lmBookingAjax.ajaxurl) || '/wp-admin/admin-ajax.php',
                 type: 'POST',
                 data: formData,
                 processData: false,
@@ -653,7 +832,9 @@ jQuery(document).ready(function($) {
                     this.showError('Netzwerkfehler. Bitte versuchen Sie es erneut.');
                 },
                 complete: () => {
-                    this.$cta.prop('disabled', false);
+                    if (this.$cta.length) {
+                        this.$cta.prop('disabled', false);
+                    }
                 }
             });
         }
@@ -664,13 +845,19 @@ jQuery(document).ready(function($) {
             this.updateStepper();
             
             // Disable voucher button and consent checkbox after successful booking
-            $('#lm-apply-voucher').prop('disabled', true).prop('readonly', true);
-            $('#lm-voucher-code').prop('disabled', true).prop('readonly', true);
-            $('#lm-consent-checkbox').prop('disabled', true);
+            const $applyVoucher = $('#lm-apply-voucher');
+            const $voucherCode = $('#lm-voucher-code');
+            const $consentCheckbox = $('#lm-consent-checkbox');
             
-            this.$cta.text(lmBookingAjax.i18n.buttons.backToHome).off('click').on('click', () => {
-                window.location.href = '/';
-            });
+            if ($applyVoucher.length) $applyVoucher.prop('disabled', true).prop('readonly', true);
+            if ($voucherCode.length) $voucherCode.prop('disabled', true).prop('readonly', true);
+            if ($consentCheckbox.length) $consentCheckbox.prop('disabled', true);
+            
+            if (this.$cta.length) {
+                this.$cta.text((lmBookingAjax && lmBookingAjax.i18n && lmBookingAjax.i18n.buttons && lmBookingAjax.i18n.buttons.backToHome) || 'Zurück zur Startseite').off('click').on('click', () => {
+                    window.location.href = '/';
+                });
+            }
         }
 
         showError(message, isFileUploadError = false) {
@@ -684,7 +871,9 @@ jQuery(document).ready(function($) {
                             <span class="lm-file-error-message"></span>
                         </div>
                     `);
-                    this.$cta.after($fileError);
+                    if (this.$cta.length) {
+                        this.$cta.after($fileError);
+                    }
                 }
                 $fileError.find('.lm-file-error-message').text(message);
                 $fileError.show();
@@ -692,22 +881,29 @@ jQuery(document).ready(function($) {
                 // File upload errors are persistent - no auto-hide
             } else {
                 // For other errors, use the existing error element
-                this.$errorMsg.text(message).show();
-                this.$errorMsg.attr('aria-live', 'assertive');
-                
-                // Auto-hide error message after 3 seconds
-                setTimeout(() => {
-                    this.hideError();
-                }, 3000);
+                if (this.$errorMsg.length) {
+                    this.$errorMsg.text(message).show();
+                    this.$errorMsg.attr('aria-live', 'assertive');
+                    
+                    // Auto-hide error message after 3 seconds
+                    setTimeout(() => {
+                        this.hideError();
+                    }, 3000);
+                }
             }
         }
 
         hideError() {
-            this.$errorMsg.hide().text('');
+            if (this.$errorMsg.length) {
+                this.$errorMsg.hide().text('');
+            }
         }
 
         hideFileUploadError() {
-            $('#lm-file-upload-error').hide().text('');
+            const $fileError = $('#lm-file-upload-error');
+            if ($fileError.length) {
+                $fileError.hide().text('');
+            }
         }
 
 
@@ -719,20 +915,30 @@ jQuery(document).ready(function($) {
         }
 
         resetUploadButton() {
-            $('.lm-upload-btn').html(`
-                <span class="lm-upload-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
-                    </svg>
-                </span>
-                Datei hochladen*
-            `);
+            const $uploadBtn = $('.lm-upload-btn');
+            if ($uploadBtn.length) {
+                $uploadBtn.html(`
+                    <span class="lm-upload-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                        </svg>
+                    </span>
+                    Datei hochladen*
+                `);
+            }
         }
 
         applyVoucher() {
-            const voucherCode = $('#lm-voucher-code').val().trim().toUpperCase();
+            const $voucherCodeInput = $('#lm-voucher-code');
             const $message = $('#lm-voucher-message');
             const $btn = $('#lm-apply-voucher');
+
+            if ($voucherCodeInput.length === 0 || $btn.length === 0) {
+                console.error('Voucher elements not found');
+                return;
+            }
+
+            const voucherCode = $voucherCodeInput.val().trim().toUpperCase();
 
             if (!voucherCode) {
                 this.showVoucherMessage('Bitte geben Sie einen Gutscheincode ein.', 'error');
@@ -743,13 +949,13 @@ jQuery(document).ready(function($) {
 
             // Call real voucher validation API
             $.ajax({
-                url: lmBookingAjax.ajaxurl,
+                url: (lmBookingAjax && lmBookingAjax.ajaxurl) || '/wp-admin/admin-ajax.php',
                 type: 'POST',
                 data: {
                     action: 'lm_validate_voucher',
                     voucher_code: voucherCode,
                     customer_email: this.state.customer.email,
-                    lm_voucher_nonce: lmBookingAjax.voucher_nonce
+                    lm_voucher_nonce: (lmBookingAjax && lmBookingAjax.voucher_nonce) || ''
                 },
                 success: (response) => {
                     if (response.success) {
@@ -760,7 +966,7 @@ jQuery(document).ready(function($) {
                         
                         
                         this.showVoucherMessage(response.data.message, 'success');
-                        $('#lm-voucher-code').prop('disabled', true).prop('readonly', true);
+                        $voucherCodeInput.prop('disabled', true).prop('readonly', true);
                         $btn.text('Angewendet').prop('disabled', true);
                         
                         this.updateState(); // Recalculate totals with discount
@@ -770,7 +976,6 @@ jQuery(document).ready(function($) {
                     }
                 },
                 error: (xhr, status, error) => {
-                    console.error('Voucher validation error:', error);
                     this.showVoucherMessage('Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.', 'error');
                 },
                 complete: () => {
@@ -781,51 +986,23 @@ jQuery(document).ready(function($) {
 
         showVoucherMessage(message, type) {
             const $message = $('#lm-voucher-message');
-            $message.removeClass('success error').addClass(type).text(message).show();
-            
-            // Auto-hide success messages
-            if (type === 'success') {
-                setTimeout(() => {
-                    $message.fadeOut();
-                }, 3000);
+            if ($message.length) {
+                $message.removeClass('success error').addClass(type).text(message).show();
+                
+                // Auto-hide success messages
+                if (type === 'success') {
+                    setTimeout(() => {
+                        $message.fadeOut();
+                    }, 3000);
+                }
             }
         }
 
-        toggleInfoPopup($infoButton) {
-            const description = $infoButton.data('description');
-            if (!description) return;
-
-            // Hide all other popups first
-            this.hideAllInfoPopups();
-
-            // Check if this popup is already showing
-            const $existingPopup = $infoButton.find('.lm-info-popup');
-            if ($existingPopup.length && $existingPopup.hasClass('show')) {
-                $existingPopup.removeClass('show');
-                return;
-            }
-
-            // Create or show popup
-            let $popup = $existingPopup;
-            if (!$popup.length) {
-                $popup = $(`<div class="lm-info-popup">${description}</div>`);
-                $infoButton.append($popup);
-            }
-
-            // Show popup with animation
-            setTimeout(() => {
-                $popup.addClass('show');
-            }, 10);
-        }
-
-        hideAllInfoPopups() {
-            $('.lm-info-popup').removeClass('show');
-        }
 
 
     }
 
     // Initialize wizard
     new BookingWizard();
-});
-
+    });
+}

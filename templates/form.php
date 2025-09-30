@@ -80,12 +80,21 @@ if (empty($extras)) {
             $label = $value;
             $price = $settings['extra_price_' . $index] ?? 0;
             $description = $settings['extra_description_' . $index] ?? '';
+            $packageInclusive = isset($settings['extra_inclusive_' . $index]) && $settings['extra_inclusive_' . $index] === '1';
+            
+            // Get included packages for this extra
+            $includedPackages = [];
+            if (isset($settings['extra_packages_' . $index]) && is_array($settings['extra_packages_' . $index])) {
+                $includedPackages = array_map('intval', $settings['extra_packages_' . $index]);
+            }
             
             if (!empty($label)) {
                 $extras[] = [
                     'label' => $label,
                     'price' => floatval($price),
-                    'description' => $description
+                    'description' => $description,
+                    'package_inclusive' => $packageInclusive,
+                    'included_packages' => $includedPackages
                 ];
             }
         }
@@ -109,52 +118,53 @@ if (empty($extras)) {
 // Load delivery options from settings
 $deliveryOptions = $settings['delivery_options'] ?? [];
 
-// If no delivery options array found, try to reconstruct from individual fields
-if (empty($deliveryOptions)) {
-    $deliveryOptions = [];
-    
-    foreach ($settings as $key => $value) {
-        if (strpos($key, 'delivery_label_') === 0) {
-            $deliveryKey = str_replace('delivery_label_', '', $key);
-            $label = $value;
-            $price = $settings['delivery_price_' . $deliveryKey] ?? 0;
-            
-            if (!empty($label)) {
-                // Convert to the format expected by the frontend
-                $days = 3; // Default days
-                switch ($deliveryKey) {
-                    case 'standard':
-                    case 'normal':
-                        $days = 3;
-                        break;
-                    case 'express':
-                    case 'fast':
-                        $days = 2;
-                        break;
-                    case 'rush':
-                        $days = 1;
-                        break;
-                }
-                
-                $deliveryOptions[] = [
-                    'label' => $label,
-                    'days' => $days,
-                    'surcharge' => floatval($price),
-                    'enabled' => true
-                ];
-            }
+// Debug: Log what we found
+error_log('Form Template - delivery_options from settings: ' . print_r($deliveryOptions, true));
+error_log('Form Template - delivery_options empty check: ' . (empty($deliveryOptions) ? 'YES' : 'NO'));
+
+// Always try to reconstruct from individual fields to ensure we have the latest data
+$reconstructedDeliveryOptions = [];
+foreach ($settings as $key => $value) {
+    if (strpos($key, 'delivery_label_') === 0) {
+        $deliveryKey = str_replace('delivery_label_', '', $key);
+        $label = $value;
+        $price = $settings['delivery_price_' . $deliveryKey] ?? 0;
+        $days = $settings['delivery_days_' . $deliveryKey] ?? 3; // Get actual days from settings
+        
+        error_log('Form Template - Found delivery field: ' . $key . ' = ' . $value . ', days = ' . $days . ', price = ' . $price);
+        
+        if (!empty($label)) {
+            $reconstructedDeliveryOptions[] = [
+                'label' => $label,
+                'days' => intval($days),
+                'surcharge' => floatval($price),
+                'enabled' => true
+            ];
         }
     }
 }
 
+// Use reconstructed options if we found any, otherwise use the ones from settings
+if (!empty($reconstructedDeliveryOptions)) {
+    $deliveryOptions = $reconstructedDeliveryOptions;
+    error_log('Form Template - Using reconstructed delivery options: ' . print_r($deliveryOptions, true));
+} else {
+    error_log('Form Template - No reconstructed options found, using settings: ' . print_r($deliveryOptions, true));
+}
+
 // If still no delivery options found, use German defaults
 if (empty($deliveryOptions)) {
+    error_log('Form Template - No delivery options found, using defaults');
     $deliveryOptions = [
         ['label' => 'Normal', 'days' => 3, 'surcharge' => 0, 'enabled' => true],
         ['label' => 'Schnelle Lieferung', 'days' => 2, 'surcharge' => 15, 'enabled' => true],
         ['label' => 'Express-Lieferung', 'days' => 1, 'surcharge' => 50, 'enabled' => true],
     ];
 }
+
+// Final debug log
+error_log('Form Template - Final delivery options: ' . print_r($deliveryOptions, true));
+error_log('Form Template - Delivery options count: ' . count($deliveryOptions));
 ?>
 
 <div class="lm-booking-wizard">
@@ -193,7 +203,7 @@ if (empty($deliveryOptions)) {
                                 <div class="lm-card-description"><?php echo esc_html($service['description']); ?></div>
                                 <?php endif; ?>
                                 <div class="lm-card-price">
-                                    €<?php echo esc_html($service['price']); ?>
+                                    <?php echo esc_html(number_format($service['price'], 2, ',', '.')); ?>€
                                     <span class="lm-price-unit">/ <?php esc_html_e('Normsite', 'lm-booking'); ?></span>
                                 </div>
                             </div>
@@ -203,7 +213,11 @@ if (empty($deliveryOptions)) {
 
                     <h3 class="lm-step-subtitle"><?php esc_html_e('Wie lange haben wir Zeit?', 'lm-booking'); ?></h3>
                     <div class="lm-delivery-pills">
-                        <?php foreach ($deliveryOptions as $index => $option): ?>
+                        <?php 
+                        error_log('Form Template - Rendering delivery pills, count: ' . count($deliveryOptions));
+                        foreach ($deliveryOptions as $index => $option): 
+                            error_log('Form Template - Processing delivery option ' . $index . ': ' . print_r($option, true));
+                        ?>
                             <?php if ($option['enabled']): ?>
                                 <label class="lm-pill <?php echo $index === 1 ? 'lm-pill-selected' : ''; ?>">
                                     <input type="radio" name="delivery" value="<?php echo esc_attr($option['days']); ?>d" class="lm-pill-input" <?php echo $index === 1 ? 'checked' : ''; ?>>
@@ -252,9 +266,8 @@ if (empty($deliveryOptions)) {
                             <input type="checkbox" name="extras[]" value="<?php echo esc_attr(wp_json_encode($extra)); ?>" class="lm-extras-checkbox" data-price="<?php echo esc_attr($extra['price']); ?>">
                             <div class="lm-extras-content">
                                 <span class="lm-extras-label"><?php echo esc_html($extra['label']); ?></span>
-                                <span class="lm-extras-price">+€<?php echo esc_html($extra['price']); ?></span>
+                                <span class="lm-extras-price"><?php echo esc_html($extra['price'] == floor($extra['price']) ? number_format($extra['price'], 0, ',', '') : number_format($extra['price'], 2, ',', '')); ?>€</span>
                             </div>
-                            <button type="button" class="lm-extras-help" title="<?php esc_attr_e('Help', 'lm-booking'); ?>">?</button>
                         </label>
                         <?php endforeach; ?>
                     </div>
@@ -262,6 +275,17 @@ if (empty($deliveryOptions)) {
 
                 <div id="lm-step-3" class="lm-step" data-step="3" style="display: none;">
                     <h2 class="lm-step-title"><?php esc_html_e('Deine Informationen:', 'lm-booking'); ?></h2>
+                    
+                    <!-- Voucher Section -->
+                    <div class="lm-voucher-section">
+                        <h3 class="lm-step-subtitle"><?php esc_html_e('Gutscheincode (optional):', 'lm-booking'); ?></h3>
+                        <div class="lm-voucher-input">
+                            <input type="text" id="lm-voucher-code" class="lm-input" placeholder="<?php esc_attr_e('Gutscheincode eingeben', 'lm-booking'); ?>" maxlength="20">
+                            <button type="button" id="lm-apply-voucher" class="lm-voucher-btn"><?php esc_html_e('Anwenden', 'lm-booking'); ?></button>
+                        </div>
+                        <div id="lm-voucher-message" class="lm-voucher-message"></div>
+                    </div>
+                    
                     <div class="lm-customer-form">
                         <div class="lm-field">
                             <input type="text" id="lm-name" name="name" class="lm-input" placeholder="<?php esc_attr_e('Vor- und Nachname', 'lm-booking'); ?>" required>
@@ -326,27 +350,44 @@ if (empty($deliveryOptions)) {
                     <span class="lm-total-amount" id="lm-total-display">€0</span>
                     <span class="lm-total-label"><?php esc_html_e('/ Gesamtpreis', 'lm-booking'); ?></span>
                 </div>
-                <div class="lm-summary-delivery">
-                    <div class="lm-delivery-label"><?php esc_html_e('Voraussichtliche lieferung bis zum', 'lm-booking'); ?></div>
-                    <div class="lm-delivery-date" id="lm-delivery-date-display">-</div>
+                <div class="lm-summary-voucher" id="lm-summary-voucher" style="display: none;">
+                    <div class="lm-voucher-info">
+                        <span class="lm-voucher-label"><?php esc_html_e('Gutschein-Rabatt:', 'lm-booking'); ?></span>
+                        <span class="lm-voucher-amount" id="lm-voucher-discount">-€0</span>
+                    </div>
+                    <div class="lm-voucher-code" id="lm-voucher-code-display"></div>
                 </div>
-                <div class="lm-summary-details">
-                    <div class="lm-summary-item">
-                        <span class="lm-summary-icon">✓</span>
-                        <span class="lm-summary-text"><?php esc_html_e('Dein Paket:', 'lm-booking'); ?> <span id="lm-summary-package">-</span></span>
+                <div class="lm-summary-collapsible" id="lm-summary-collapsible">
+                    <div class="lm-summary-delivery">
+                        <div class="lm-delivery-label"><?php esc_html_e('Voraussichtliche lieferung bis zum', 'lm-booking'); ?></div>
+                        <div class="lm-delivery-date" id="lm-delivery-date-display">-</div>
                     </div>
-                    <div class="lm-summary-item">
-                        <span class="lm-summary-icon">✓</span>
-                        <span class="lm-summary-text"><?php esc_html_e('Gewählte Zeitdauer:', 'lm-booking'); ?> <span id="lm-summary-delivery">-</span></span>
+                    <div class="lm-summary-details">
+                        <div class="lm-summary-item">
+                            <span class="lm-summary-icon">✓</span>
+                            <span class="lm-summary-text"><?php esc_html_e('Dein Paket:', 'lm-booking'); ?> <span id="lm-summary-package">-</span></span>
+                        </div>
+                        <div class="lm-summary-item">
+                            <span class="lm-summary-icon">✓</span>
+                            <span class="lm-summary-text"><?php esc_html_e('Gewählte Zeitdauer:', 'lm-booking'); ?> <span id="lm-summary-delivery">-</span></span>
+                        </div>
+                        <div class="lm-summary-item">
+                            <span class="lm-summary-icon">✓</span>
+                            <span class="lm-summary-text"><?php esc_html_e('Extra Leistungen:', 'lm-booking'); ?> <span id="lm-summary-extras"><?php esc_html_e('keine ausgewählt', 'lm-booking'); ?></span></span>
+                        </div>
+                        <div class="lm-summary-item">
+                            <span class="lm-summary-icon">✓</span>
+                            <span class="lm-summary-text"><?php esc_html_e('Normenseiten:', 'lm-booking'); ?> <span id="lm-summary-pages">-</span></span>
+                        </div>
                     </div>
-                    <div class="lm-summary-item">
-                        <span class="lm-summary-icon">✓</span>
-                        <span class="lm-summary-text"><?php esc_html_e('Extra Leistungen:', 'lm-booking'); ?> <span id="lm-summary-extras"><?php esc_html_e('keine ausgewählt', 'lm-booking'); ?></span></span>
+                </div>
+                <div class="lm-voucher-section" id="lm-voucher-section" style="display: none;">
+                    <h3 class="lm-step-subtitle">Gutscheincode (optional):</h3>
+                    <div class="lm-voucher-input">
+                        <input type="text" id="lm-voucher-code" class="lm-input" placeholder="Gutscheincode eingeben" maxlength="20">
+                        <button type="button" id="lm-apply-voucher" class="lm-voucher-btn">Anwenden</button>
                     </div>
-                    <div class="lm-summary-item">
-                        <span class="lm-summary-icon">✓</span>
-                        <span class="lm-summary-text"><?php esc_html_e('Normenseiten:', 'lm-booking'); ?> <span id="lm-summary-pages">-</span></span>
-                    </div>
+                    <div id="lm-voucher-message" class="lm-voucher-message"></div>
                 </div>
                 <div class="lm-summary-consent" id="lm-summary-consent" style="display: none;">
                     <label class="lm-consent-checkbox">

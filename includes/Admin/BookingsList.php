@@ -228,6 +228,7 @@ class BookingsList
             'norm_pages' => get_post_meta($booking_id, '_lm_booking_norm_pages', true),
             'delivery' => get_post_meta($booking_id, '_lm_booking_delivery', true),
             'delivery_date' => get_post_meta($booking_id, '_lm_booking_delivery_date', true),
+            'delivery_date_formatted' => $this->formatDeliveryDate(get_post_meta($booking_id, '_lm_booking_delivery_date', true)),
             'extras' => get_post_meta($booking_id, '_lm_booking_extras', true),
             'total' => get_post_meta($booking_id, '_lm_booking_total', true),
             'status' => get_post_meta($booking_id, '_lm_booking_status', true) ?: 'pending',
@@ -455,7 +456,7 @@ class BookingsList
                     <table class="form-table">
                         <tr>
                             <th><?php esc_html_e('Total Amount', 'lm-booking'); ?></th>
-                            <td><strong class="total-amount">€<?php echo esc_html($meta['total']); ?></strong></td>
+                            <td><strong class="total-amount"><?php echo esc_html($meta['total']); ?>€</strong></td>
                         </tr>
                         <tr>
                             <th><?php esc_html_e('Status', 'lm-booking'); ?></th>
@@ -475,9 +476,23 @@ class BookingsList
                     $extras = json_decode($meta['extras'], true);
                     if (is_array($extras)) {
                         foreach ($extras as $extra) {
-                            $isInclusive = !empty($extra['included_packages']);
+                            // Check if this extra is actually inclusive for the selected package
+                            $includedPackages = $extra['included_packages'] ?? [];
+                            $selectedPackageIndex = $this->getSelectedPackageIndex($meta['service']);
+                            
+                            // Convert included_packages to integers to ensure proper comparison
+                            $includedPackages = array_map('intval', $includedPackages);
+                            $isInclusive = in_array($selectedPackageIndex, $includedPackages);
+                            
                             $cssClass = $isInclusive ? 'lm-extra-inclusive' : '';
-                            $priceDisplay = $isInclusive ? '' : ' (+€' . esc_html($extra['price']) . ')';
+                            if ($isInclusive) {
+                                $priceDisplay = ' <span style="background-color: #fff3cd; color: #856404; padding: 2px 6px; border-radius: 4px; font-size: 11px;">(inkl.)</span>';
+                            } else {
+                                $price = $extra['price'] == floor($extra['price']) ? 
+                                    $extra['price'] : 
+                                    number_format($extra['price'], 2, ',', '');
+                                $priceDisplay = ' (+€' . $price . ')';
+                            }
                             echo '<li class="' . $cssClass . '">' . esc_html($extra['label']) . $priceDisplay . '</li>';
                         }
                     }
@@ -488,7 +503,7 @@ class BookingsList
                 <?php if ($meta['breakdown']): ?>
                 <h3><?php esc_html_e('Price Breakdown', 'lm-booking'); ?></h3>
                 <div class="lm-breakdown-formatted">
-                    <?php echo $this->formatPriceBreakdown($meta['breakdown']); ?>
+                    <?php echo $this->formatPriceBreakdown($meta['breakdown'], $meta['service']); ?>
                 </div>
                 <?php endif; ?>
 
@@ -682,7 +697,7 @@ class BookingsList
         echo '<table border="1">';
         echo '<tr>';
         echo '<th>ID</th>';
-        echo '<th>Date</th>';
+        echo '<th>Booking Date</th>';
         echo '<th>Customer Name</th>';
         echo '<th>Email</th>';
         echo '<th>Service</th>';
@@ -704,24 +719,38 @@ class BookingsList
             $extras = json_decode($meta['extras'], true);
             $extrasList = '';
             if (is_array($extras)) {
-                $extrasList = implode('; ', array_map(function($extra) {
-                    $isInclusive = !empty($extra['included_packages']);
-                    $priceDisplay = $isInclusive ? '' : ' (+€' . $extra['price'] . ')';
-                    return $extra['label'] . $priceDisplay;
+                $extrasList = implode('; ', array_map(function($extra) use ($meta) {
+                    // Check if this extra is actually inclusive for the selected package
+                    $includedPackages = $extra['included_packages'] ?? [];
+                    $selectedPackageIndex = $this->getSelectedPackageIndex($meta['service']);
+                    
+                    // Convert included_packages to integers to ensure proper comparison
+                    $includedPackages = array_map('intval', $includedPackages);
+                    $isInclusive = in_array($selectedPackageIndex, $includedPackages);
+                    
+                    
+                    if ($isInclusive) {
+                        return '<span style="background-color: #fff3cd; color: #856404; padding: 2px 6px; border-radius: 4px; font-size: 11px;">' . $extra['label'] . ' (inkl.)</span>';
+                    } else {
+                        $price = $extra['price'] == floor($extra['price']) ? 
+                            $extra['price'] : 
+                            number_format($extra['price'], 2, ',', '');
+                        return $extra['label'] . ' (+€' . $price . ')';
+                    }
                 }, $extras));
             }
 
             echo '<tr>';
             echo '<td>' . esc_html($booking->ID) . '</td>';
-            echo '<td>' . esc_html($booking->post_date) . '</td>';
+            echo '<td>' . esc_html(date('d.m.Y H:i', strtotime($booking->post_date))) . '</td>';
             echo '<td>' . esc_html($meta['customer_name']) . '</td>';
             echo '<td>' . esc_html($meta['customer_email']) . '</td>';
             echo '<td>' . esc_html($meta['service']) . '</td>';
             echo '<td>' . esc_html($meta['words']) . '</td>';
             echo '<td>' . esc_html($meta['norm_pages']) . '</td>';
             echo '<td>' . esc_html($meta['delivery']) . '</td>';
-            echo '<td>' . esc_html($meta['delivery_date']) . '</td>';
-            echo '<td>' . esc_html($extrasList) . '</td>';
+            echo '<td>' . esc_html($meta['delivery_date_formatted']) . '</td>';
+            echo '<td>' . $extrasList . '</td>';
             echo '<td>' . esc_html($meta['total']) . '</td>';
             
             // Voucher column
@@ -948,12 +977,26 @@ class BookingsList
                         <?php 
                         $extras = json_decode($meta['extras'], true);
                         if (is_array($extras)) {
-                            foreach ($extras as $extra) {
-                                $isInclusive = !empty($extra['included_packages']);
-                                $cssClass = $isInclusive ? 'lm-extra-inclusive' : '';
-                                $priceDisplay = $isInclusive ? '' : ' (+€' . esc_html($extra['price']) . ')';
-                                echo '<li class="' . $cssClass . '">' . esc_html($extra['label']) . $priceDisplay . '</li>';
+                        foreach ($extras as $extra) {
+                            // Check if this extra is actually inclusive for the selected package
+                            $includedPackages = $extra['included_packages'] ?? [];
+                            $selectedPackageIndex = $this->getSelectedPackageIndex($meta['service']);
+                            
+                            // Convert included_packages to integers to ensure proper comparison
+                            $includedPackages = array_map('intval', $includedPackages);
+                            $isInclusive = in_array($selectedPackageIndex, $includedPackages);
+                            
+                            $cssClass = $isInclusive ? 'lm-extra-inclusive' : '';
+                            if ($isInclusive) {
+                                $priceDisplay = ' <span style="background-color: #fff3cd; color: #856404; padding: 2px 6px; border-radius: 4px; font-size: 11px;">(inkl.)</span>';
+                            } else {
+                                $price = $extra['price'] == floor($extra['price']) ? 
+                                    $extra['price'] : 
+                                    number_format($extra['price'], 2, ',', '');
+                                $priceDisplay = ' (+€' . $price . ')';
                             }
+                            echo '<li class="' . $cssClass . '">' . esc_html($extra['label']) . $priceDisplay . '</li>';
+                        }
                         }
                         ?>
                     </ul>
@@ -965,7 +1008,7 @@ class BookingsList
                     <?php if (!empty($meta['voucher_code'])): ?>
                     <div class="lm-detail-item">
                         <strong><?php esc_html_e('Original Amount:', 'lm-booking'); ?></strong>
-                        <span>€<?php echo esc_html($meta['original_total']); ?></span>
+                        <span><?php echo esc_html($meta['original_total']); ?>€</span>
                     </div>
                     <div class="lm-detail-item">
                         <strong><?php esc_html_e('Voucher Code:', 'lm-booking'); ?></strong>
@@ -978,7 +1021,7 @@ class BookingsList
                     <?php endif; ?>
                     <div class="lm-detail-item">
                         <strong><?php esc_html_e('Total Amount:', 'lm-booking'); ?></strong>
-                        <span><strong>€<?php echo esc_html($meta['total']); ?></strong></span>
+                        <span><strong><?php echo esc_html($meta['total']); ?>€</strong></span>
                     </div>
                     <div class="lm-detail-item">
                         <strong><?php esc_html_e('Status:', 'lm-booking'); ?></strong>
@@ -1017,7 +1060,7 @@ class BookingsList
             <div class="lm-detail-section lm-full-width">
                 <h4><?php esc_html_e('Price Breakdown', 'lm-booking'); ?></h4>
                 <div class="lm-breakdown-formatted">
-                    <?php echo $this->formatPriceBreakdown($meta['breakdown']); ?>
+                    <?php echo $this->formatPriceBreakdown($meta['breakdown'], $meta['service']); ?>
                 </div>
             </div>
             <?php endif; ?>
@@ -1028,7 +1071,7 @@ class BookingsList
         wp_send_json_success(['html' => $html]);
     }
 
-    private function formatPriceBreakdown(string $breakdown): string
+    private function formatPriceBreakdown(string $breakdown, string $service = ''): string
     {
         $data = json_decode($breakdown, true);
         if (!$data) {
@@ -1049,7 +1092,7 @@ class BookingsList
         if (isset($data['base'])) {
             $html .= '<div class="lm-breakdown-row">';
             $html .= '<span class="lm-breakdown-label">' . __('Base Price:', 'lm-booking') . '</span>';
-            $html .= '<span class="lm-breakdown-value">€' . number_format($data['base'], 2) . '</span>';
+            $html .= '<span class="lm-breakdown-value">' . number_format($data['base'], 2) . '€</span>';
             $html .= '</div>';
         }
 
@@ -1058,14 +1101,30 @@ class BookingsList
             $html .= '<div class="lm-breakdown-section">';
             $html .= '<div class="lm-breakdown-label">' . __('Extras:', 'lm-booking') . '</div>';
             foreach ($data['extras'] as $extra) {
-                $isInclusive = !empty($extra['included_packages']);
-                $cssClass = $isInclusive ? 'lm-breakdown-row lm-breakdown-indent lm-extra-inclusive' : 'lm-breakdown-row lm-breakdown-indent';
+                $cssClass = 'lm-breakdown-row lm-breakdown-indent';
                 $html .= '<div class="' . $cssClass . '">';
                 $html .= '<span class="lm-breakdown-label">' . esc_html($extra['label'] ?? 'Extra') . ':</span>';
+                
+                // Check if this extra is actually inclusive for the selected package
+                $includedPackages = $extra['included_packages'] ?? [];
+                $selectedPackageIndex = $this->getSelectedPackageIndex($service);
+                
+                // Convert included_packages to integers to ensure proper comparison
+                $includedPackages = array_map('intval', $includedPackages);
+                $isInclusive = in_array($selectedPackageIndex, $includedPackages);
+                
                 if ($isInclusive) {
-                    $html .= '<span class="lm-breakdown-value">Included</span>';
+                    // This extra is inclusive for the selected package
+                    $price = $extra['price'] == floor($extra['price']) ? 
+                        $extra['price'] : 
+                        number_format($extra['price'], 2, ',', '');
+                    $html .= '<span class="lm-breakdown-value" style="text-decoration: line-through; color: #6c757d;">' . $price . '€</span> <small style="color: #856404;">(inklusive)</small>';
                 } else {
-                    $html .= '<span class="lm-breakdown-value">€' . number_format($extra['price'] ?? 0, 2) . '</span>';
+                    // This extra is charged separately
+                    $price = $extra['price'] == floor($extra['price']) ? 
+                        $extra['price'] : 
+                        number_format($extra['price'], 2, ',', '');
+                    $html .= '<span class="lm-breakdown-value">' . $price . '€</span>';
                 }
                 $html .= '</div>';
             }
@@ -1076,7 +1135,7 @@ class BookingsList
         if (isset($data['extrasTotal']) && $data['extrasTotal'] > 0) {
             $html .= '<div class="lm-breakdown-row">';
             $html .= '<span class="lm-breakdown-label">' . __('Extras Total:', 'lm-booking') . '</span>';
-            $html .= '<span class="lm-breakdown-value">€' . number_format($data['extrasTotal'], 2) . '</span>';
+            $html .= '<span class="lm-breakdown-value">' . number_format($data['extrasTotal'], 2) . '€</span>';
             $html .= '</div>';
         }
 
@@ -1084,15 +1143,24 @@ class BookingsList
         if (isset($data['subtotal'])) {
             $html .= '<div class="lm-breakdown-row lm-breakdown-subtotal">';
             $html .= '<span class="lm-breakdown-label">' . __('Subtotal:', 'lm-booking') . '</span>';
-            $html .= '<span class="lm-breakdown-value">€' . number_format($data['subtotal'], 2) . '</span>';
+            $html .= '<span class="lm-breakdown-value">' . number_format($data['subtotal'], 2) . '€</span>';
             $html .= '</div>';
         }
 
-        // Surcharge
-        if (isset($data['surcharge']) && $data['surcharge'] > 0) {
+        // Surcharge - calculate actual surcharge amount from percentage
+        if (isset($data['surcharge']) && $data['surcharge'] > 0 && isset($data['subtotal'])) {
+            $surchargeAmount = round(($data['subtotal'] * $data['surcharge'] / 100), 2);
             $html .= '<div class="lm-breakdown-row">';
             $html .= '<span class="lm-breakdown-label">' . __('Surcharge:', 'lm-booking') . '</span>';
-            $html .= '<span class="lm-breakdown-value">€' . number_format($data['surcharge'], 2) . '</span>';
+            $html .= '<span class="lm-breakdown-value">' . number_format($surchargeAmount, 2) . '€</span>';
+            $html .= '</div>';
+        }
+
+        // Voucher Discount
+        if (isset($data['voucher_code']) && !empty($data['voucher_code']) && isset($data['discount_amount']) && $data['discount_amount'] > 0) {
+            $html .= '<div class="lm-breakdown-row">';
+            $html .= '<span class="lm-breakdown-label">' . __('Voucher Discount:', 'lm-booking') . '</span>';
+            $html .= '<span class="lm-breakdown-value" style="color: #28a745;">-' . number_format($data['discount_amount'], 2) . '€</span>';
             $html .= '</div>';
         }
 
@@ -1100,7 +1168,7 @@ class BookingsList
         if (isset($data['total'])) {
             $html .= '<div class="lm-breakdown-row lm-breakdown-total">';
             $html .= '<span class="lm-breakdown-label">' . __('Total:', 'lm-booking') . '</span>';
-            $html .= '<span class="lm-breakdown-value">€' . number_format($data['total'], 2) . '</span>';
+            $html .= '<span class="lm-breakdown-value">' . number_format($data['total'], 2) . '€</span>';
             $html .= '</div>';
         }
 
@@ -1401,6 +1469,41 @@ class BookingsList
         $factor = floor(log($bytes, 1024));
         
         return round($bytes / pow(1024, $factor), 2) . ' ' . $units[$factor];
+    }
+
+    /**
+     * Get the package index for a given service name
+     */
+    private function getSelectedPackageIndex($serviceName): int
+    {
+        $settings = get_option('lm_booking_settings', []);
+        $services = $settings['services'] ?? [];
+        
+        foreach ($services as $index => $service) {
+            if ($service['label'] === $serviceName) {
+                return $index;
+            }
+        }
+        return 0; // Default to first package if not found
+    }
+
+    /**
+     * Format delivery date to match the form summary display
+     */
+    private function formatDeliveryDate(string $delivery_date): string
+    {
+        if (empty($delivery_date)) {
+            return '-';
+        }
+
+        // Convert to timestamp and format like the JavaScript version
+        $timestamp = strtotime($delivery_date);
+        if ($timestamp === false) {
+            return $delivery_date; // Return original if parsing fails
+        }
+
+        // Format like the JavaScript: "Mo., 29. Sept. 2025, 00:17"
+        return date('D., j. M Y, H:i', $timestamp);
     }
 
 }

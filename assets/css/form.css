@@ -7,6 +7,7 @@
     min-height: 100vh;
 }
 
+
 .lm-wizard-container {
     display: grid;
     grid-template-columns: 2fr 320px;
@@ -36,7 +37,9 @@
     align-items: center;
     justify-content: center;
     margin-bottom: 40px;
-    padding: 0 20px;
+    padding: 0 10px;
+    flex-wrap: nowrap;
+    gap: 8px;
 }
 
 .lm-stepper-item {
@@ -44,11 +47,14 @@
     flex-direction: column;
     align-items: center;
     position: relative;
+    flex: 1;
+    min-width: 0;
+    padding: 0 4px;
 }
 
 .lm-stepper-circle {
-    width: 40px;
-    height: 40px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     background: #e8f5e8;
     border: 2px solid #d4edda;
@@ -57,7 +63,7 @@
     align-items: center;
     justify-content: center;
     font-weight: 600;
-    font-size: 16px;
+    font-size: 14px;
     transition: all 0.3s ease;
 }
 
@@ -74,11 +80,15 @@
 }
 
 .lm-stepper-label {
-    margin-top: 8px;
-    font-size: 14px;
+    margin-top: 6px;
+    font-size: 12px;
     font-weight: 500;
     color: #6c757d;
     text-align: center;
+    white-space: normal;
+    line-height: 1.1;
+    word-wrap: break-word;
+    max-width: 80px;
 }
 
 .lm-stepper-item.lm-stepper-active .lm-stepper-label {
@@ -89,20 +99,19 @@
 .lm-stepper-line {
     flex: 1;
     height: 2px;
-    background: #252525;
-    margin: 0 16px;
-    position: relative;
-    top: -20px;
-    border: none;
-    border-top: 2px dotted #d4edda;
     background: transparent;
+    margin: 0 4px;
+    position: relative;
+    top: -10px;
+    border: none;
+    border-top: 1px dashed #1e7e34;
 }
 
 .lm-stepper-line::after {
     content: '';
     position: absolute;
     right: -8px;
-    top: -6px;
+    top: -5px;
     width: 0;
     height: 0;
     border-left: 6px solid #252525;
@@ -198,6 +207,7 @@
 .lm-card:nth-child(3) {
     background: #e8f5e8;
     color: #518756;
+    border: 1px solid #518556;
 }
 
 .lm-card-input {
@@ -234,7 +244,7 @@
     font-family: 'Poppins', sans-serif;
     font-size: 38px;
     font-weight: 600;
-    line-height: 40px;
+    /* line-height: 40px; */
     color: #252525;
     margin-bottom: 4px;
     display: flex;
@@ -247,7 +257,7 @@
     font-family: 'Poppins', sans-serif;
     font-size: 16px;
     font-weight: 400;
-    line-height: 40px;
+    /* line-height: 40px; */
     color: #454545;
 }
 
@@ -412,7 +422,7 @@
 .lm-words-number {
     width: 80px;
     padding: 8px 12px;
-    border: 2px solid #e9ecef;
+    border: 2px solid #f8f9fa;
     border-radius: 6px;
     text-align: center;
     font-weight: 600;
@@ -497,6 +507,49 @@
     color: #fff;
 }
 
+/* Package-inclusive extras styling */
+.lm-extras-item:has(.lm-extras-checkbox.package-inclusive) {
+    border-color: #ffc107;
+    border-style: solid;
+    background: #fffbf0;
+    position: relative;
+}
+
+.lm-extras-item:has(.lm-extras-checkbox.package-inclusive)::before {
+    content: "Inklusive";
+    position: absolute;
+    top: -8px;
+    right: 8px;
+    background: #ffc107;
+    color: #000;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.lm-extras-item:has(.lm-extras-checkbox.package-inclusive:hover) {
+    border-color: #ffb300;
+    background: #fff8e1;
+}
+
+.lm-extras-item:has(.lm-extras-checkbox.package-inclusive:checked) {
+    border-color: #ffc107;
+    background: #fffbf0;
+    color: #000;
+}
+
+/* Add line-through to inclusive extras price */
+.lm-extras-item:has(.lm-extras-checkbox.package-inclusive) .lm-extras-price {
+    text-decoration: line-through;
+}
+
+.lm-extras-item:has(.lm-extras-checkbox.package-inclusive:checked)::before {
+    background: #28a745;
+    color: #fff;
+}
+
 .lm-extras-checkbox {
     width: 20px;
     height: 20px;
@@ -517,7 +570,6 @@
 }
 
 .lm-extras-checkbox:checked::after {
-    content: '✓';
     position: absolute;
     top: 50%;
     left: 50%;
@@ -525,6 +577,7 @@
     color: #518756;
     font-size: 12px;
     font-weight: bold;
+    background: inherit;
 }
 
 /* Package Inclusive Extras */
@@ -603,125 +656,6 @@
     font-size: 14px;
 }
 
-/* Extras Help Button - Force override any conflicting styles */
-button.lm-extras-help,
-.lm-extras-item button.lm-extras-help,
-.lm-extras-help {
-    width: 24px !important;
-    height: 24px !important;
-    min-width: 24px !important;
-    min-height: 24px !important;
-    max-width: 24px !important;
-    max-height: 24px !important;
-    border-radius: 50% !important;
-    background: #6c757d !important;
-    color: #fff !important;
-    border: none !important;
-    font-size: 12px !important;
-    font-weight: 600 !important;
-    cursor: pointer !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    transition: background-color 0.3s ease !important;
-    outline: none !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    text-align: center !important;
-    line-height: 1 !important;
-    vertical-align: middle !important;
-    -webkit-appearance: none !important;
-    appearance: none !important;
-    position: relative !important;
-    z-index: 1 !important;
-}
-
-button.lm-extras-help:hover,
-.lm-extras-item button.lm-extras-help:hover,
-.lm-extras-help:hover {
-    background: #495057 !important;
-}
-
-button.lm-extras-help:focus,
-.lm-extras-item button.lm-extras-help:focus,
-.lm-extras-help:focus {
-    outline: 2px solid #518756 !important;
-    outline-offset: 2px !important;
-}
-
-/* Extras Info Icon */
-.lm-extras-info {
-    width: 24px !important;
-    height: 24px !important;
-    min-width: 24px !important;
-    min-height: 24px !important;
-    max-width: 24px !important;
-    max-height: 24px !important;
-    border-radius: 50% !important;
-    background: #6c757d !important;
-    color: #fff !important;
-    border: none !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    cursor: pointer !important;
-    transition: all 0.2s ease !important;
-    flex-shrink: 0 !important;
-    position: relative !important;
-    z-index: 1 !important;
-}
-
-.lm-extras-info svg {
-    width: 14px !important;
-    height: 14px !important;
-}
-
-.lm-extras-info:hover {
-    background: #495057 !important;
-}
-
-.lm-extras-info:focus {
-    outline: 2px solid #518756 !important;
-    outline-offset: 2px !important;
-}
-
-/* Info Popup */
-.lm-info-popup {
-    position: absolute;
-    bottom: 100%;
-    right: 0;
-    background: #333;
-    color: #fff;
-    padding: 12px 16px;
-    border-radius: 8px;
-    font-size: 14px;
-    line-height: 1.4;
-    max-width: 280px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    z-index: 1000;
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(10px);
-    transition: all 0.2s ease;
-    pointer-events: none;
-}
-
-.lm-info-popup::after {
-    content: '';
-    position: absolute;
-    top: 100%;
-    right: 20px;
-    border: 6px solid transparent;
-    border-top-color: #333;
-}
-
-.lm-info-popup.show {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-    pointer-events: auto;
-}
 
 /* Customer Form */
 .lm-customer-form {
@@ -769,6 +703,49 @@ button.lm-extras-help:focus,
     font-weight: 600;
     color: #212529;
     margin-bottom: 20px;
+    text-align: center;
+}
+
+
+@media (min-width: 769px) {
+    .lm-stepper-label {
+        max-width: none;
+    }
+}
+
+/* Show collapsible content by default on desktop */
+.lm-summary-collapsible {
+    max-height: none;
+    opacity: 1;
+}
+
+/* Ensure summary section is always visible on desktop */
+@media (min-width: 1025px) {
+    .lm-wizard-summary {
+        display: block !important;
+        position: sticky !important;
+        top: 24px !important;
+        order: unset !important;
+    }
+    
+    .lm-summary-card {
+        border-radius: 12px !important;
+    }
+}
+
+.lm-summary-collapsible {
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+}
+
+.lm-summary-collapsible.collapsed {
+    max-height: 0;
+    opacity: 0;
+}
+
+.lm-summary-collapsible.expanded {
+    max-height: 500px;
+    opacity: 1;
 }
 
 .lm-summary-total {
@@ -776,6 +753,103 @@ button.lm-extras-help:focus,
 
     display: flex;
     align-items: baseline;
+}
+
+.lm-summary-voucher {
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    background: #d4edda;
+    border: 1px solid #c3e6cb;
+    border-radius: 8px;
+}
+
+.lm-voucher-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.lm-voucher-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #155724;
+}
+
+.lm-voucher-amount {
+    font-size: 16px;
+    font-weight: 600;
+    color: #28a745;
+}
+
+.lm-voucher-code {
+    font-size: 12px;
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Voucher Input Section */
+.lm-voucher-section {
+    margin-bottom: 30px;
+    padding: 20px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+}
+
+.lm-voucher-input {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.lm-voucher-input .lm-input {
+    flex: 1;
+    max-width: 200px;
+    text-transform: uppercase;
+}
+
+.lm-voucher-btn {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    white-space: nowrap;
+}
+
+.lm-voucher-btn:hover {
+    background: #218838;
+}
+
+.lm-voucher-btn:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+}
+
+.lm-voucher-message {
+    margin-top: 8px;
+    font-size: 14px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    display: none;
+}
+
+.lm-voucher-message.success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+    display: block;
+}
+
+.lm-voucher-message.error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+    display: block;
 }
 
 
@@ -828,6 +902,7 @@ button.lm-extras-help:focus,
     margin: 0 -24px 20px -24px;
     border: 1px solid #c3e6cb;
     text-align: center;
+    width: calc(100% + 48px);
 }
 
 @media (max-width: 768px) {
@@ -1153,7 +1228,11 @@ button[type="button"]:disabled {
     
     .lm-wizard-summary {
         position: static;
-        order: -1;
+        order: 2; /* Move summary to bottom on mobile */
+    }
+    
+    .lm-wizard-main {
+        order: 1; /* Ensure main content comes first */
     }
 }
 
@@ -1162,18 +1241,160 @@ button[type="button"]:disabled {
         padding: 16px;
     }
     
+    /* Make summary section full width on mobile */
+    .lm-wizard-summary {
+        margin-left: -16px;
+        margin-right: -16px;
+    }
+    
     .lm-wizard-main {
         padding: 20px;
-        min-width: 700px;
+        min-width: unset;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
     }
     
     .lm-summary-card {
         padding: 20px;
     }
     
+    .lm-card-description {
+        display: none;
+    }
+    
+    .lm-words-slider {
+        display: none;
+    }
+    
     .lm-package-cards {
         grid-template-columns: 1fr;
-        grid-template-rows: auto auto auto;
+    }
+    
+    
+    /* Ensure summary section is visible on mobile */
+    .lm-wizard-summary {
+        display: block !important;
+        order: 2;
+        position: static;
+        border-radius: 0 !important;
+    }
+    
+    
+    /* Adjust summary card to connect with tab */
+    .lm-summary-card {
+        border-top: none !important;
+        border-radius: 0 !important;
+        margin-top: 0 !important;
+    }
+    
+    
+    /* Hide collapsible content by default on mobile */
+    .lm-summary-collapsible {
+        max-height: 0;
+        opacity: 0;
+    }
+    
+    /* Override with expanded state on mobile */
+    .lm-summary-collapsible.expanded {
+        max-height: 500px !important;
+        opacity: 1 !important;
+    }
+    
+    /* Left align summary title and remove bottom padding on mobile */
+    .lm-summary-title {
+        text-align: left !important;
+        margin-bottom: 0 !important;
+    }
+    
+    /* Add top spacing for words display on mobile */
+    .lm-words-display {
+        margin-top: 24px;
+    }
+    
+    .lm-delivery-date {
+        font-size: 14px;
+        word-break: break-word;
+    }
+    
+    .lm-stepper {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .lm-stepper-item {
+        font-size: 12px;
+        padding: 8px 12px;
+    }
+    
+    .lm-summary-delivery {
+        margin: 0 -16px 20px -16px;
+        padding: 12px 16px;
+        width: calc(100% + 32px);
+    }
+    
+    .lm-voucher-section {
+        padding: 16px;
+        margin-bottom: 20px;
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+    }
+    
+    .lm-voucher-section .lm-step-subtitle {
+        margin-bottom: 12px;
+        font-size: 14px;
+        color: #495057;
+    }
+    
+    .lm-voucher-section .lm-voucher-input {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+    
+    .lm-voucher-section .lm-input {
+        flex: 1;
+        padding: 8px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+    
+    .lm-voucher-section .lm-voucher-btn {
+        padding: 8px 16px;
+        background: #518756;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 14px;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+    
+    .lm-voucher-section .lm-voucher-btn:hover {
+        background: #1e7e34;
+    }
+    
+    .lm-voucher-section .lm-voucher-message {
+        font-size: 12px;
+        margin-top: 4px;
+    }
+    
+    .lm-voucher-input {
+        flex-direction: column;
+        gap: 8px;
+        align-items: stretch;
+    }
+    
+    .lm-voucher-input .lm-input {
+        max-width: none;
+        width: 100%;
+    }
+    
+    .lm-voucher-btn {
+        width: 100%;
+        padding: 14px 20px;
     }
     
     .lm-card:nth-child(1),
@@ -1197,11 +1418,78 @@ button[type="button"]:disabled {
     }
     
     .lm-stepper {
-        padding: 0 10px;
+        padding: 0;
+        gap: 0;
+        align-items: start;
     }
     
     .lm-stepper-line {
         margin: 0 8px;
+        top: 25px;
+    }
+    
+    /* Lighter border for number inputs on mobile */
+    input[type="number"] {
+        border: 1px solid #e9ecef !important;
+    }
+    
+    input[type="number"]:focus {
+        border-color: #518756 !important;
+        box-shadow: 0 0 0 2px rgba(81, 135, 86, 0.1) !important;
+    }
+    
+    /* Smaller stepper labels on mobile */
+    .lm-stepper-label {
+        font-size: 11px;
+    }
+    
+    /* Mobile details button */
+    #lm-mobile-details-btn,
+    .lm-mobile-details-btn {
+        display: flex !important;
+        align-items: center;
+        gap: 4px;
+        background: white;
+        border: 1px solid #518756;
+        border-bottom: none;
+        border-radius: 8px 8px 0 0;
+        color: #518756;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        padding: 8px 16px;
+        margin: -16px 0 0 auto; /* Auto left margin to push to right */
+        box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+        position: relative !important;
+        top: auto !important;
+        left: auto !important;
+        right: auto !important;
+        bottom: auto !important;
+        transform: translateY(-21px) translateX(-10px) !important;
+        float: none !important;
+        clear: both !important;
+        z-index: 1;
+        width: auto; /* Auto width */
+        order: -1; /* Ensure it appears first */
+    }
+    
+    #lm-mobile-details-btn:hover,
+    .lm-mobile-details-btn:hover {
+        background: #f8fff9;
+    }
+    
+    #lm-mobile-details-btn.expanded,
+    .lm-mobile-details-btn.expanded {
+    }
+    
+    .lm-details-icon {
+        transition: transform 0.2s ease;
+        font-size: 12px;
+    }
+    
+    #lm-mobile-details-btn.expanded .lm-details-icon,
+    .lm-mobile-details-btn.expanded .lm-details-icon {
+        transform: rotate(180deg);
     }
 }
 

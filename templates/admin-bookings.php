@@ -8,6 +8,19 @@ $stats = $bookingsList->getBookingStats();
 $packages = $bookingsList->getAvailablePackages();
 $deliveryOptions = $bookingsList->getAvailableDeliveryOptions();
 
+// Helper function to get selected package index
+function getSelectedPackageIndex($serviceName) {
+    $settings = get_option('lm_booking_settings', []);
+    $services = $settings['services'] ?? [];
+    
+    foreach ($services as $index => $service) {
+        if ($service['label'] === $serviceName) {
+            return $index;
+        }
+    }
+    return 0; // Default to first package if not found
+}
+
 // Handle individual booking actions
 if (isset($_GET['action']) && isset($_GET['booking_id'])) {
     $action = sanitize_text_field($_GET['action']);
@@ -298,10 +311,24 @@ if (isset($_GET['action']) && isset($_GET['booking_id'])) {
                                                 </svg>
                                             </button>
                                             <div class="lm-extras-menu">
-                                                <?php foreach ($extras as $extra): ?>
-                                                    <span class="lm-extra-badge">
-                                                        <?php echo esc_html($extra['label']); ?> (+€<?php echo esc_html($extra['price']); ?>)
-                                                    </span>
+                                                <?php foreach ($extras as $extra): 
+                                                    // Check if this extra is actually inclusive for the selected package
+                                                    $includedPackages = $extra['included_packages'] ?? [];
+                                                    $selectedPackageIndex = getSelectedPackageIndex($meta['service']);
+                                                    
+                                                    // Convert included_packages to integers to ensure proper comparison
+                                                    $includedPackages = array_map('intval', $includedPackages);
+                                                    $isInclusive = in_array($selectedPackageIndex, $includedPackages);
+                                                ?>
+                                                    <?php if ($isInclusive): ?>
+                                                        <span class="lm-extra-badge" style="background-color: #fff3cd; color: #856404; border-color: #ffc107;">
+                                                            <?php echo esc_html($extra['label']); ?> (inkl.)
+                                                        </span>
+                                                    <?php else: ?>
+                                                        <span class="lm-extra-badge">
+                                                            <?php echo esc_html($extra['label']); ?> (+€<?php echo esc_html($extra['price']); ?>)
+                                                        </span>
+                                                    <?php endif; ?>
                                                 <?php endforeach; ?>
                                             </div>
                                         </div>
@@ -309,10 +336,24 @@ if (isset($_GET['action']) && isset($_GET['booking_id'])) {
                                     } else {
                                         // Single extra - show badge
                                         $extra = $extras[0];
+                                        
+                                        // Check if this extra is actually inclusive for the selected package
+                                        $includedPackages = $extra['included_packages'] ?? [];
+                                        $selectedPackageIndex = getSelectedPackageIndex($meta['service']);
+                                        
+                                        // Convert included_packages to integers to ensure proper comparison
+                                        $includedPackages = array_map('intval', $includedPackages);
+                                        $isInclusive = in_array($selectedPackageIndex, $includedPackages);
                                         ?>
-                                        <span class="lm-extra-badge">
-                                            <?php echo esc_html($extra['label']); ?> (+€<?php echo esc_html($extra['price']); ?>)
-                                        </span>
+                                        <?php if ($isInclusive): ?>
+                                            <span class="lm-extra-badge" style="background-color: #fff3cd; color: #856404; border-color: #ffc107;">
+                                                <?php echo esc_html($extra['label']); ?> (inkl.)
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="lm-extra-badge">
+                                                <?php echo esc_html($extra['label']); ?> (+€<?php echo esc_html($extra['price']); ?>)
+                                            </span>
+                                        <?php endif; ?>
                                         <?php
                                     }
                                 } else {
@@ -324,7 +365,7 @@ if (isset($_GET['action']) && isset($_GET['booking_id'])) {
                             <td class="lm-delivery-cell">
                                 <div class="lm-delivery-info">
                                     <span class="lm-delivery-type"><?php echo esc_html($meta['delivery']); ?></span>
-                                    <span class="lm-delivery-date"><?php echo esc_html(date('M j', strtotime($meta['delivery_date']))); ?></span>
+                                    <span class="lm-delivery-date"><?php echo esc_html($meta['delivery_date_formatted']); ?></span>
                                 </div>
                             </td>
                             <td><strong><?php echo '€' . number_format($meta['total'], 2, ',', '.'); ?></strong></td>

@@ -36,11 +36,16 @@ class Email
             $template = $this->addVoucherInfoToTemplate($template, $originalTotal, $total, $discountAmount, $voucherCode, $voucherDiscount);
         }
 
-        $extrasList = $this->formatExtrasList($extras);
+        $extrasList = $this->formatExtrasList($extras, $service);
         $breakdownData = json_decode($breakdown, true);
 
         $settings = get_option('lm_booking_settings', []);
         $subject = $settings['booking_email_subject'] ?? __('Your booking request & invoice - Lektorat Mac', 'lm-booking');
+        
+        // Get delivery date and format it
+        $deliveryDate = get_post_meta($postId, '_lm_booking_delivery_date', true);
+        $delivery = get_post_meta($postId, '_lm_booking_delivery', true);
+        $formattedDeliveryDate = $this->formatDeliveryDate($deliveryDate);
         
         // Replace placeholders in the template
         $message = str_replace([
@@ -60,7 +65,9 @@ class Email
             '{invoice_number}',
             '{invoice_date}',
             '{due_date}',
-            '{payment_info}'
+            '{payment_info}',
+            '{delivery_time}',
+            '{delivery_date}'
         ], [
             $name,
             $email,
@@ -78,11 +85,18 @@ class Email
             $this->generateInvoiceNumber($postId),
             current_time('d.m.Y'),
             date('d.m.Y', strtotime('+14 days')),
-            $this->formatPaymentInfo()
+            $this->formatPaymentInfo(),
+            $this->formatDelivery($delivery),
+            $formattedDeliveryDate
         ], $template);
 
-        // Wrap the template with CSS styles for proper email formatting
-        $htmlMessage = $this->wrapEmailTemplateWithStyles($message, 'booking');
+        // Use the comprehensive invoice HTML template if no custom template is set
+        if (empty($settings['booking_email_template'])) {
+            $htmlMessage = $this->generateInvoiceHtml($postId, $message);
+        } else {
+            // Wrap the template with CSS styles for proper email formatting
+            $htmlMessage = $this->wrapEmailTemplateWithStyles($message, 'booking');
+        }
 
         $headers = ['Content-Type: text/html; charset=UTF-8'];
 
@@ -116,7 +130,7 @@ class Email
         $settings = get_option('lm_booking_settings', []);
         $template = $settings['email_admin'] ?? $this->getDefaultAdminTemplate();
 
-        $extrasList = $this->formatExtrasList($extras);
+        $extrasList = $this->formatExtrasList($extras, $service);
         $breakdownData = json_decode($breakdown, true);
 
         // Get document info for email
@@ -155,7 +169,7 @@ class Email
             'words' => number_format($words),
             'norm_pages' => $normPages,
             'delivery' => $this->formatDelivery($delivery),
-            'delivery_date' => $deliveryDate,
+            'delivery_date' => $this->formatDeliveryDate($deliveryDate),
             'extras' => $extrasList,
             'base' => number_format($breakdownData['base'] ?? 0, 2),
             'extras_total' => number_format($breakdownData['extrasTotal'] ?? 0, 2),
@@ -217,7 +231,7 @@ class Email
     {
         $html = '<div class="service-item">
             <span class="service-name">' . esc_html($service) . '</span>
-            <span class="service-price">€' . number_format($breakdownData['base'] ?? 0, 2) . '</span>
+            <span class="service-price">' . number_format($breakdownData['base'] ?? 0, 2) . '€</span>
         </div>';
         
         if ($words > 0) {
@@ -235,20 +249,40 @@ class Email
         }
         
         if (!empty($extrasList) && $extrasList !== __('None', 'lm-booking')) {
-            $html .= '<div class="service-item">
-                <span class="service-name">Extras Total</span>
-                <span class="service-price">€' . number_format($breakdownData['extrasTotal'] ?? 0, 2) . '</span>
-            </div>';
+            // Parse extras for individual display
+            $extrasArray = json_decode($extras, true);
+            
+            // Use the corrected extras total from the breakdown data
+            // (The breakdown should now have the correct total excluding inclusive extras)
+            if (($breakdownData['extrasTotal'] ?? 0) > 0) {
+                $html .= '<div class="service-item">
+                    <span class="service-name">Extras Total</span>
+                    <span class="service-price">' . number_format($breakdownData['extrasTotal'], 2) . '€</span>
+                </div>';
+            }
             
             // Add individual extras
-            $extrasArray = json_decode($extras, true);
             if (is_array($extrasArray)) {
                 foreach ($extrasArray as $extra) {
                     if (isset($extra['label'], $extra['price'])) {
-                        $html .= '<div class="service-item" style="margin-left: 20px;">
-                            <span class="service-name">• ' . esc_html($extra['label']) . '</span>
-                            <span class="service-price">€' . number_format($extra['price'], 2) . '</span>
-                        </div>';
+                        // Check if this extra is actually inclusive for the selected package
+                        $includedPackages = $extra['included_packages'] ?? [];
+                        $selectedPackageIndex = $this->getSelectedPackageIndex($service);
+                        $isInclusive = in_array($selectedPackageIndex, $includedPackages);
+                        
+                        if ($isInclusive) {
+                            // Show inclusive extra with special styling
+                            $html .= '<div class="service-item" style="margin-left: 20px;">
+                                <span class="service-name">• ' . esc_html($extra['label']) . ' <span style="background-color: #ffc107; color: #212529; padding: 2px 6px; border-radius: 3px; font-size: 11px;">(inklusive)</span></span>
+                                <span class="service-price" style="text-decoration: line-through; color: #6c757d;">' . number_format($extra['price'], 2) . '€</span>
+                            </div>';
+                        } else {
+                            // Show regular extra with price
+                            $html .= '<div class="service-item" style="margin-left: 20px;">
+                                <span class="service-name">• ' . esc_html($extra['label']) . '</span>
+                                <span class="service-price">' . number_format($extra['price'], 2) . '€</span>
+                            </div>';
+                        }
                     }
                 }
             }
@@ -454,9 +488,9 @@ class Email
     {
         // Replace the total-amount div with voucher pricing display
         $voucherPricingHtml = '
-                <div class="lm-original-price">€' . number_format($originalTotal, 2) . '</div>
-                <div class="lm-discounted-price">€' . number_format($total, 2) . '</div>
-                <div class="lm-discount-info">(-€' . number_format($discountAmount, 2) . ')</div>
+                <div class="lm-original-price">' . number_format($originalTotal, 2) . '€</div>
+                <div class="lm-discounted-price">' . number_format($total, 2) . '€</div>
+                <div class="lm-discount-info">(-' . number_format($discountAmount, 2) . '€)</div>
                 <div class="voucher-info">
                     <p><strong>Gutscheincode:</strong> ' . esc_html($voucherCode) . ' (' . $voucherDiscount . '% Rabatt)</p>
                 </div>';
@@ -478,7 +512,20 @@ class Email
 
     private function getDefaultAdminTemplate(): string
     {
-        return __('New request from {{name}} ({{email}}). Service: {{service}}. Total: €{{total}}{{document_info}}', 'lm-booking');
+        return __('New booking request from {{name}} ({{email}})
+
+Service: {{service}}
+Words: {{words}}
+Norm Pages: {{norm_pages}}
+Delivery: {{delivery}}
+Expected Delivery: {{delivery_date}}
+Extras: {{extras}}
+Total: {{total}}€
+Breakdown: {{breakdown}}
+
+{{document_info}}
+
+Please review and process this booking request.', 'lm-booking');
     }
 
     private function getAdminRecipients(): array
@@ -538,7 +585,7 @@ class Email
         return $html;
     }
 
-    private function formatExtrasList(string $extras): string
+    private function formatExtrasList(string $extras, string $service = ''): string
     {
         if (empty($extras)) {
             return __('None', 'lm-booking');
@@ -552,19 +599,40 @@ class Email
         $formatted = [];
         foreach ($extrasArray as $extra) {
             if (isset($extra['label'])) {
-                $isInclusive = !empty($extra['included_packages']);
+                // Check if this extra is actually inclusive for the selected package
+                $includedPackages = $extra['included_packages'] ?? [];
+                $selectedPackageIndex = $this->getSelectedPackageIndex($service);
+                $isInclusive = in_array($selectedPackageIndex, $includedPackages);
+                
                 if ($isInclusive) {
                     // For inclusive extras, show with yellow notice styling and no price
-                    $formatted[] = '<span style="background-color: #ffc107; color: #212529; padding: 2px 6px; border-radius: 3px; font-size: 11px;">' . esc_html($extra['label']) . ' (Included)</span>';
+                    $formatted[] = '<span style="background-color: #ffc107; color: #212529; padding: 2px 6px; border-radius: 3px; font-size: 11px;">' . esc_html($extra['label']) . ' (inklusive)</span>';
                 } else {
                     // For regular extras, show with price
                     $price = $extra['price'] ?? 0;
-                    $formatted[] = $extra['label'] . ' (€' . number_format($price, 2) . ')';
+                    $formatted[] = $extra['label'] . ' (' . number_format($price, 2) . '€)';
                 }
             }
         }
 
         return empty($formatted) ? __('None', 'lm-booking') : implode(', ', $formatted);
+    }
+
+    /**
+     * Get the package index for a given service name
+     */
+    private function getSelectedPackageIndex(string $serviceName): int
+    {
+        $settings = get_option('lm_booking_settings', []);
+        $services = $settings['services'] ?? [];
+        
+        foreach ($services as $index => $service) {
+            if ($service['label'] === $serviceName) {
+                return $index;
+            }
+        }
+        
+        return 0; // Default to first package if not found
     }
 
     private function formatDelivery(string $delivery): string
@@ -579,6 +647,22 @@ class Email
         }
     }
 
+    private function formatDeliveryDate(string $deliveryDate): string
+    {
+        if (empty($deliveryDate)) {
+            return __('Not specified', 'lm-booking');
+        }
+        
+        // Parse the delivery date and format it nicely
+        $timestamp = strtotime($deliveryDate);
+        if ($timestamp === false) {
+            return $deliveryDate; // Return as-is if parsing fails
+        }
+        
+        // Format as "D., j. M Y, H:i" (e.g., "Mo., 29. Sept. 2025, 00:17")
+        return date('D., j. M Y, H:i', $timestamp);
+    }
+
     private function formatBreakdown(array $breakdown): string
     {
         if (empty($breakdown)) {
@@ -586,17 +670,17 @@ class Email
         }
 
         $parts = [];
-        $parts[] = __('Base', 'lm-booking') . ': €' . number_format($breakdown['base'] ?? 0, 2);
+        $parts[] = __('Base', 'lm-booking') . ': ' . number_format($breakdown['base'] ?? 0, 2) . '€';
         
         if (!empty($breakdown['extras'])) {
-            $parts[] = __('Extras', 'lm-booking') . ': €' . number_format($breakdown['extrasTotal'] ?? 0, 2);
+            $parts[] = __('Extras', 'lm-booking') . ': ' . number_format($breakdown['extrasTotal'] ?? 0, 2) . '€';
         }
         
         if (($breakdown['surcharge'] ?? 0) > 0) {
-            $parts[] = __('Surcharge', 'lm-booking') . ': €' . number_format($breakdown['surcharge'], 2);
+            $parts[] = __('Surcharge', 'lm-booking') . ': ' . number_format($breakdown['surcharge'], 2) . '€';
         }
         
-        $parts[] = __('Total', 'lm-booking') . ': €' . number_format($breakdown['total'] ?? 0, 2);
+        $parts[] = __('Total', 'lm-booking') . ': ' . number_format($breakdown['total'] ?? 0, 2) . '€';
 
         return implode(', ', $parts);
     }
@@ -744,21 +828,38 @@ class Email
                     <tr>
                         <td>' . esc_html($service) . '</td>
                         <td>' . esc_html($normPages) . ' ' . esc_html__('norm pages', 'lm-booking') . '</td>
-                        <td>€' . esc_html(number_format($breakdownData['base'] / $normPages, 2)) . '</td>
-                        <td>€' . esc_html(number_format($breakdownData['base'], 2)) . '</td>
+                        <td>' . esc_html(number_format($breakdownData['base'] / $normPages, 2)) . '€</td>
+                        <td>' . esc_html(number_format($breakdownData['base'], 2)) . '€</td>
                     </tr>';
 
         // Add extras if any
         if (!empty($extrasArray) && is_array($extrasArray)) {
             foreach ($extrasArray as $extra) {
                 if (isset($extra['label'], $extra['price'])) {
-                    $html .= '
-                    <tr>
-                        <td>' . esc_html($extra['label']) . '</td>
-                        <td>1</td>
-                        <td>€' . esc_html(number_format($extra['price'], 2)) . '</td>
-                        <td>€' . esc_html(number_format($extra['price'], 2)) . '</td>
-                    </tr>';
+                    // Check if this extra is actually inclusive for the selected package
+                    $includedPackages = $extra['included_packages'] ?? [];
+                    $selectedPackageIndex = $this->getSelectedPackageIndex($service);
+                    $isInclusive = in_array($selectedPackageIndex, $includedPackages);
+                    
+                    if ($isInclusive) {
+                        // Show inclusive extra with special styling
+                        $html .= '
+                        <tr style="background-color: #fff3cd;">
+                            <td>' . esc_html($extra['label']) . ' <span style="background-color: #ffc107; color: #212529; padding: 2px 6px; border-radius: 3px; font-size: 11px;">(inklusive)</span></td>
+                            <td>1</td>
+                            <td style="text-decoration: line-through; color: #6c757d;">' . esc_html(number_format($extra['price'], 2)) . '€</td>
+                            <td style="text-decoration: line-through; color: #6c757d;">' . esc_html(number_format($extra['price'], 2)) . '€</td>
+                        </tr>';
+                    } else {
+                        // Show regular extra with price
+                        $html .= '
+                        <tr>
+                            <td>' . esc_html($extra['label']) . '</td>
+                            <td>1</td>
+                            <td>' . esc_html(number_format($extra['price'], 2)) . '€</td>
+                            <td>' . esc_html(number_format($extra['price'], 2)) . '€</td>
+                        </tr>';
+                    }
                 }
             }
         }
@@ -771,28 +872,28 @@ class Email
         <div class="total-section">
             <div class="total-row">
                 <span>' . esc_html__('Subtotal:', 'lm-booking') . '</span>
-                <span>€' . esc_html(number_format($breakdownData['subtotal'] ?? 0, 2)) . '</span>
+                <span>' . esc_html(number_format($breakdownData['subtotal'] ?? 0, 2)) . '€</span>
             </div>';
 
         if (($breakdownData['surcharge'] ?? 0) > 0) {
             $html .= '
             <div class="total-row">
                 <span>' . esc_html__('Delivery Surcharge (' . $this->formatDelivery($delivery) . '):', 'lm-booking') . '</span>
-                <span>€' . esc_html(number_format($breakdownData['surcharge'], 2)) . '</span>
+                <span>' . esc_html(number_format($breakdownData['surcharge'], 2)) . '€</span>
             </div>';
         }
 
         $html .= '
             <div class="total-row final">
                 <span>' . esc_html__('Total Amount:', 'lm-booking') . '</span>
-                <span>€' . esc_html(number_format($total, 2)) . '</span>
+                <span>' . esc_html(number_format($total, 2)) . '€</span>
             </div>
         </div>
 
         <div class="delivery-info">
             <h4>' . esc_html__('Delivery Information', 'lm-booking') . '</h4>
             <p><strong>' . esc_html__('Delivery Time:', 'lm-booking') . '</strong> ' . esc_html($this->formatDelivery($delivery)) . '</p>
-            <p><strong>' . esc_html__('Expected Delivery:', 'lm-booking') . '</strong> ' . esc_html($deliveryDate) . '</p>
+            <p><strong>' . esc_html__('Expected Delivery:', 'lm-booking') . '</strong> ' . esc_html($this->formatDeliveryDate($deliveryDate)) . '</p>
             <p><strong>' . esc_html__('Word Count:', 'lm-booking') . '</strong> ' . esc_html(number_format($words)) . ' ' . esc_html__('words', 'lm-booking') . '</p>
         </div>
 
